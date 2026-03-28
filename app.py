@@ -119,39 +119,44 @@ def upload():
 
 @app.route('/pins', methods=['GET'])
 def get_pins():
-    try:
-        user_lat = float(request.args.get('lat'))
-        user_lon = float(request.args.get('lon'))
-    except (TypeError, ValueError):
-        return jsonify({'error': 'Valid lat and lon queries are required'}), 400
+    # 1. Safely get the arguments (they will be None if not provided)
+    lat = request.args.get('lat')
+    lon = request.args.get('lon')
 
     conn = get_db_connection()
-
     if not conn:
         return jsonify({'error': 'Database connection failed'}), 500
-    
+
     cursor = conn.cursor(dictionary=True)
 
     try:
-        cursor.execute("SELECT id, lat, lon FROM pins")
-        all_pins = cursor.fetchall()
+        # 2. The IF/ELSE Check
+        if lat and lon:
+            # If they provide a location, fetch pins ordered by distance 
+            # (Replace this query with your exact previous one if it was different)
+            query = """
+                SELECT id, lat, lon, created_at,
+                ( 3959 * acos( cos( radians(%s) ) * cos( radians( lat ) ) * cos( radians( lon ) - radians(%s) ) + sin( radians(%s) ) * sin( radians( lat ) ) ) ) AS distance 
+                FROM pins 
+                ORDER BY distance 
+                LIMIT 100
+            """
+            cursor.execute(query, (float(lat), float(lon), float(lat)))
+        else:
+            # If no location is provided (Global View), just fetch the latest pins!
+            query = "SELECT id, lat, lon, created_at FROM pins ORDER BY created_at DESC LIMIT 200"
+            cursor.execute(query)
 
-        for pin in all_pins:
-            p_lat = float(pin['lat'])
-            p_lon = float(pin['lon'])
-            pin['distance'] = haversine(user_lat, user_lon, p_lat, p_lon)
-            pin['lat'] = p_lat
-            pin['lon'] = p_lon
-
-        closest_pins = heapq.nsmallest(30, all_pins, key=lambda x: x['distance'])
-        return jsonify(closest_pins), 200
+        pins = cursor.fetchall()
+        return jsonify(pins), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"🔥 DB ERROR: {e}")
+        return jsonify({'error': 'Failed to fetch pins'}), 500
     finally:
         cursor.close()
         conn.close()
-
+        
 @app.route('/pins/<int:pin_id>', methods=['GET'])
 def get_gallery(pin_id):
     conn = get_db_connection()

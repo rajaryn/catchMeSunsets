@@ -1,9 +1,16 @@
-// During local dev this is fine, but for production, we will use a relative path
 const API_BASE = window.location.origin;
 let map;
 let markersLayer;
 let currentUserLat = null;
 let currentUserLon = null;
+
+// State for the Lightbox Carousel
+let currentGalleryImages = [];
+let currentImageIndex = 0;
+
+const lightboxModal = document.getElementById("lightbox-modal");
+const lightboxImg = document.getElementById("lightbox-img");
+const lightboxDate = document.getElementById("lightbox-date");
 
 const uploadBtn = document.getElementById("upload-btn");
 const fileInput = document.getElementById("file-input");
@@ -29,12 +36,13 @@ const sunsetIcon = L.divIcon({
   iconAnchor: [20, 20],
 });
 
+// --- 1. INITIAL LOAD ---
 function initApp() {
   const bounds = L.latLngBounds(L.latLng(-89.9, -180), L.latLng(89.9, 180));
 
   map = L.map("map", {
-    center: [20, 0],
-    zoom: 2,
+    center: [22.5937, 78.9629],
+    zoom: 4,
     maxBounds: bounds,
     maxBoundsViscosity: 1.0,
     minZoom: 2,
@@ -46,53 +54,12 @@ function initApp() {
   ).addTo(map);
 
   markersLayer = L.layerGroup().addTo(map);
-
-  // --- THE GEOLOCATION BLOCK (With High Accuracy) ---
-  if (navigator.geolocation) {
-    uploadBtn.innerText = "📍 Locating...";
-    uploadBtn.disabled = true;
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        currentUserLat = position.coords.latitude;
-        currentUserLon = position.coords.longitude;
-        console.log(`Accuracy: ${position.coords.accuracy} meters`);
-
-        map.setView([currentUserLat, currentUserLon], 15); // Zoomed in more for accuracy
-        fetchPins();
-        uploadBtn.innerText = "📸 Upload Sunset Here";
-        uploadBtn.disabled = false;
-      },
-      (error) => {
-        console.error("Geolocation error:", error);
-        showToast("Location error. Try moving near a window.", true);
-        uploadBtn.innerText = "Location Error";
-      },
-      {
-        enableHighAccuracy: true, // Forces the device to use GPS if available
-        timeout: 10000,
-        maximumAge: 0,
-      },
-    );
-  } else {
-    showToast("Geolocation is not supported by your browser.", true);
-  }
-
-  // --- Register Service Worker ---
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker
-      .register("/service-worker.js")
-      .then(() => console.log("Service Worker Registered"))
-      .catch((err) => console.error("Service Worker Failed", err));
-  }
+  fetchAllPins();
 }
 
-async function fetchPins() {
-  if (!currentUserLat || !currentUserLon) return;
+async function fetchAllPins() {
   try {
-    const response = await fetch(
-      `${API_BASE}/pins?lat=${currentUserLat}&lon=${currentUserLon}`,
-    );
+    const response = await fetch(`${API_BASE}/pins`);
     if (!response.ok) throw new Error("Failed to fetch pins");
     const pins = await response.json();
     markersLayer.clearLayers();
@@ -106,17 +73,72 @@ async function fetchPins() {
   }
 }
 
+// --- 2. UPLOAD CLICK ---
 uploadBtn.addEventListener("click", () => {
-  if (currentUserLat && currentUserLon) fileInput.click();
+  if (currentUserLat && currentUserLon) {
+    fileInput.click();
+    return;
+  }
+
+  if (navigator.geolocation) {
+    uploadBtn.innerText = "📍 Locating...";
+    uploadBtn.disabled = true;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        currentUserLat = position.coords.latitude;
+        currentUserLon = position.coords.longitude;
+        map.setView([currentUserLat, currentUserLon], 15);
+        uploadBtn.innerText = "📸 Select Photo";
+        uploadBtn.disabled = false;
+        fileInput.click();
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        showToast("Location is required to upload a sunset.", true);
+        uploadBtn.innerText = "Share Location to Upload";
+        uploadBtn.disabled = false;
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 0,
+      },
+    );
+  } else {
+    showToast("Location not supported by browser.", true);
+  }
 });
 
+// --- 3. FILE UPLOAD ---
 fileInput.addEventListener("change", async (event) => {
-  const file = event.target.files[0];
+  let file = event.target.files[0];
   if (!file) return;
 
   const originalText = uploadBtn.innerText;
-  uploadBtn.innerText = "⏳ Uploading...";
+  uploadBtn.innerText = "⏳ Processing...";
   uploadBtn.disabled = true;
+
+  if (file.name.toLowerCase().endsWith(".heic") || file.type === "image/heic") {
+    try {
+      showToast("Converting iPhone photo...");
+      const blob = await heic2any({
+        blob: file,
+        toType: "image/jpeg",
+        quality: 0.8,
+      });
+      file = new File([blob], file.name.replace(/\.heic/i, ".jpg"), {
+        type: "image/jpeg",
+      });
+    } catch (e) {
+      showToast("Could not process HEIC file", true);
+      uploadBtn.innerText = originalText;
+      uploadBtn.disabled = false;
+      return;
+    }
+  }
+
+  uploadBtn.innerText = "☁️ Uploading...";
 
   const formData = new FormData();
   formData.append("image", file);
@@ -129,7 +151,7 @@ fileInput.addEventListener("change", async (event) => {
       body: formData,
     });
     if (response.ok) {
-      await fetchPins();
+      await fetchAllPins();
       showToast("Sunset captured successfully! 🌅");
     } else {
       const errorData = await response.json();
@@ -138,32 +160,58 @@ fileInput.addEventListener("change", async (event) => {
   } catch (error) {
     showToast("Network error while uploading.", true);
   } finally {
-    uploadBtn.innerText = originalText;
+    uploadBtn.innerText = "📸 Upload Another";
     uploadBtn.disabled = false;
     fileInput.value = "";
   }
 });
 
+// --- 4. GALLERY VIEW ---
+// --- 4. GALLERY VIEW ---
 async function openGallery(pinId) {
-  galleryModal.style.display = "flex";
+  // 1. Smoothly fade in the modal overlay
+  galleryModal.classList.add("show-modal");
   galleryContent.innerHTML = "";
-  galleryLoading.style.display = "block";
+
+  // 2. Reset and show the animated thematic loader in the center
+  galleryLoading.style.display = "flex";
+  galleryLoading.classList.remove("fade-out"); // Reset the fade state from previous views
+  galleryLoading.innerHTML = `
+    <div class="loader-sun">🌅</div>
+    <p>Catching the sunsets...</p>
+  `;
 
   try {
     const response = await fetch(`${API_BASE}/pins/${pinId}`);
     if (!response.ok) throw new Error("Failed to fetch gallery");
-    const images = await response.json();
-    galleryLoading.style.display = "none";
 
+    const images = await response.json();
+
+    // 3. Start the slow fade-out of the loader
+    galleryLoading.classList.add("fade-out");
+    
+    // Completely hide it from the layout only AFTER the 0.8s CSS fade finishes
+    setTimeout(() => {
+        galleryLoading.style.display = "none";
+    }, 800); 
+
+    // Handle empty state if no images exist
     if (images.length === 0) {
       galleryContent.innerHTML =
-        '<p style="color:white;">No images found for this pin.</p>';
+        '<p style="color:white; text-align:center; width:100%; margin-top: 60px;">No sunsets caught here yet.</p>';
       return;
     }
 
-    images.forEach((img) => {
+    currentGalleryImages = images;
+
+    // 4. Render the images
+    images.forEach((img, index) => {
       const card = document.createElement("div");
       card.className = "image-card";
+
+      // Staggered entrance animation for a cascading effect
+      card.style.animationDelay = `${index * 0.1}s`;
+      card.onclick = () => openLightbox(index);
 
       const imgElement = document.createElement("img");
       imgElement.src = img.file_path;
@@ -173,12 +221,19 @@ async function openGallery(pinId) {
       const dateElement = document.createElement("div");
       dateElement.className = "image-date";
 
-      const localDate = new Date(img.uploaded_at).toLocaleString(undefined, {
+      // UTC to Local Timezone conversion
+      const safeDateString = img.uploaded_at.replace(" ", "T");
+      const utcString = safeDateString.endsWith("Z")
+        ? safeDateString
+        : safeDateString + "Z";
+
+      const localDate = new Date(utcString).toLocaleString(undefined, {
         month: "short",
         day: "numeric",
         hour: "2-digit",
         minute: "2-digit",
       });
+
       dateElement.innerText = localDate;
 
       card.appendChild(imgElement);
@@ -186,12 +241,69 @@ async function openGallery(pinId) {
       galleryContent.appendChild(card);
     });
   } catch (error) {
-    galleryLoading.innerText = "Failed to load images.";
+    console.error("Gallery Error:", error);
+    // Ensure the loader is visible if there's an error so the user sees the message
+    galleryLoading.classList.remove("fade-out"); 
+    galleryLoading.style.display = "flex";
+    galleryLoading.innerHTML = `<p style="color:#ff5e3a;">Failed to catch the sun. Check your connection.</p>`;
   }
 }
 
+// --- LIGHTBOX CAROUSEL LOGIC ---
+function openLightbox(index) {
+  currentImageIndex = index;
+  updateLightboxView();
+  lightboxModal.classList.add("show");
+}
+
+function closeLightbox() {
+  lightboxModal.classList.remove("show");
+}
+
+function updateLightboxView() {
+  const img = currentGalleryImages[currentImageIndex];
+  lightboxImg.src = img.file_path;
+
+  const safeDateString = img.uploaded_at.replace(" ", "T");
+  const utcString = safeDateString.endsWith("Z")
+    ? safeDateString
+    : safeDateString + "Z";
+  const localDate = new Date(utcString).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  lightboxDate.innerText = localDate;
+}
+
+function prevImage() {
+  currentImageIndex--;
+  if (currentImageIndex < 0)
+    currentImageIndex = currentGalleryImages.length - 1;
+  updateLightboxView();
+}
+
+function nextImage() {
+  currentImageIndex++;
+  if (currentImageIndex >= currentGalleryImages.length) currentImageIndex = 0;
+  updateLightboxView();
+}
+
+lightboxModal.addEventListener("click", (e) => {
+  if (e.target === lightboxModal) closeLightbox();
+});
+
+// --- CLOSE GALLERY LOGIC ---
 closeBtn.addEventListener("click", () => {
-  galleryModal.style.display = "none";
+  // CHANGED: Remove class instead of changing display
+  galleryModal.classList.remove("show-modal");
+
+  // Clear content after animation finishes
+  setTimeout(() => {
+    galleryContent.innerHTML = "";
+  }, 400);
 });
 
 window.onload = initApp;

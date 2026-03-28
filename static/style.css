@@ -5,7 +5,7 @@ html {
     padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     height: 100%;
-    background-color:#fffcfb;
+    background-color: #fffcfb;
 }
 
 #map {
@@ -14,41 +14,49 @@ html {
     z-index: 1;
 }
 
-/* Floating Upload Button */
+/* Floating Upload Button (Glassmorphism Style) */
 .upload-btn {
     position: absolute;
     bottom: 30px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 1000;
-    background-color: #ff5e3a;
-    color: white;
-    border: none;
+    background-color: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #333;
+    border: 1px solid rgba(255, 255, 255, 0.3);
     padding: 15px 30px;
     border-radius: 30px;
     font-size: 16px;
     font-weight: bold;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(255, 94, 58, 0.4);
-    transition: transform 0.2s, background-color 0.2s;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
 }
 
+/* Hover State: Signature Orange */
 .upload-btn:hover {
-    background-color: #e04e2e;
+    background-color: #ff5e3a;
+    color: white;
     transform: translateX(-50%) scale(1.05);
+    box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4);
+    border-color: transparent;
 }
 
 .upload-btn:disabled {
-    background-color: #ccc;
+    background-color: rgba(200, 200, 200, 0.5);
+    color: #888;
     cursor: not-allowed;
     box-shadow: none;
+    backdrop-filter: none;
 }
 
 #file-input {
     display: none;
 }
 
-/* --- NEW: Toast Notification --- */
+/* --- Toast Notification --- */
 .toast {
     position: absolute;
     top: -50px;
@@ -68,8 +76,7 @@ html {
     top: 20px;
 }
 
-/* --- NEW: Custom Pulsing Sunset Marker --- */
-
+/* --- Custom Pulsing Sunset Marker --- */
 .sunset-wrapper {
     background: transparent;
     border: none;
@@ -102,63 +109,278 @@ html {
     }
 }
 
-/* Gallery Overlay */
+/* --- Aesthetic Pinterest Gallery with Frosted Glass --- */
 #gallery-modal {
-    display: none;
-    position: absolute;
+    /* CHANGED: Replaced display: none with smooth transition properties */
+    display: flex;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(20px);
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+    position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(10, 10, 10, 0.4);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
     z-index: 2000;
     flex-direction: column;
     align-items: center;
     overflow-y: auto;
-    padding-top: 60px;
+    padding: 80px 20px 40px 20px;
+    box-sizing: border-box;
 }
 
-.close-btn {
-    position: absolute;
-    top: 20px;
-    right: 30px;
-    color: white;
-    font-size: 40px;
-    cursor: pointer;
-    line-height: 1;
+/* The active state toggled by JavaScript */
+#gallery-modal.show-modal {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
 }
 
+/* The Pinterest Magic: Column Layout */
 .gallery-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 30px;
-    width: 85%;
-    max-width: 1000px;
-    padding-bottom: 50px;
+    column-count: 2;
+    column-gap: 15px;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
-/* --- NEW: Image Cards with Dates --- */
+@media (min-width: 768px) {
+    .gallery-grid {
+        column-count: 3;
+        column-gap: 20px;
+    }
+}
+
 .image-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    display: inline-block;
+    width: 100%;
+    margin-bottom: 15px;
+    background: #1a1a1a;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    position: relative;
+    cursor: pointer;
+
+    /* CHANGED: Image Entrance Animation setup */
+    opacity: 0;
+    transform: translateY(30px);
+    animation: fadeUp 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+@keyframes fadeUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.image-card:hover {
+    transform: scale(1.02);
 }
 
 .gallery-img {
     width: 100%;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
-    background: #222;
+    max-height: 450px;
+    display: block;
+    object-fit: cover;
+    object-position: center;
+    height: 100%;
 }
 
+/* --- OVERLAY TIMESTAMP (Frosted Pill) --- */
 .image-date {
-    color: #aaa;
-    font-size: 0.85rem;
-    margin-top: 8px;
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(10, 10, 10, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    pointer-events: none;
 }
 
-.loading-text {
+/* --- FULLSCREEN LIGHTBOX CAROUSEL --- */
+.lightbox {
+    visibility: hidden;
+    opacity: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(10, 10, 10, 0.4);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.lightbox.show {
+    visibility: visible;
+    opacity: 1;
+}
+
+#lightbox-img {
+    max-width: 90vw;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(255, 94, 58, 0.3), 0 0 80px rgba(255, 94, 58, 0.1);
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+}
+
+.lightbox.show #lightbox-img {
+    transform: scale(1);
+}
+
+.nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(5px);
     color: white;
-    font-size: 1.2rem;
-    margin-top: 20px;
+    border: none;
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background 0.2s;
+    z-index: 3100;
+}
+
+.nav-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.prev-btn {
+    left: 20px;
+}
+
+.next-btn {
+    right: 20px;
+}
+
+.lightbox-date {
+    margin-top: 15px;
+    color: #ddd;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+/* --- UNIFIED CLOSE BUTTON --- */
+.close-btn,
+.lightbox-close {
+    position: absolute;
+    top: 25px;
+    right: 25px;
+    background: rgba(255, 255, 255, 0.15);
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    z-index: 3100;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    transition: background 0.2s ease, transform 0.2s ease;
+    line-height: 0;
+    padding-bottom: 3px;
+}
+
+/* CHANGED: Fixed the stray comma syntax error here */
+.close-btn:hover,
+.lightbox-close:hover {
+    background: rgba(255, 94, 58, 0.9);
+    transform: scale(1.1);
+}
+
+/* --- Thematic Sunset Loader --- */
+/* --- Thematic Sunset Loader --- */
+.thematic-loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    /* CHANGED: Position absolutely to perfectly center it in the modal */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2010;
+    transition: opacity 0.8s ease-in-out;
+    /* Slow fade effect */
+    opacity: 1;
+}
+
+/* NEW: Class added via JS to trigger the fade */
+.thematic-loader.fade-out {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.loader-sun {
+    font-size: 50px;
+    animation: floatingSun 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 15px rgba(255, 94, 58, 0.6));
+    margin-bottom: 15px;
+}
+
+.thematic-loader p {
+    color: #ff5e3a;
+    font-weight: 500;
+    letter-spacing: 1px;
+    font-size: 0.9rem;
+    opacity: 0.8;
+    animation: pulseText 2s ease-in-out infinite;
+}
+
+/* Floating Animation */
+@keyframes floatingSun {
+    0% {
+        transform: translateY(0px) scale(1);
+    }
+
+    50% {
+        transform: translateY(-15px) scale(1.1);
+    }
+
+    100% {
+        transform: translateY(0px) scale(1);
+    }
+}
+
+/* Breathing Text Animation */
+@keyframes pulseText {
+
+    0%,
+    100% {
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 1;
+    }
 }

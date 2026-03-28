@@ -6,32 +6,41 @@
     <title>catchMeSunsets</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#ff5e3a">
     <link rel="apple-touch-icon" href="/static/images/icon-192.png">
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 </head>
 <body>
 
     <div id="map"></div>
 
-    <button class="upload-btn" id="upload-btn">📸 Upload Sunset Here</button>
+    <button class="upload-btn" id="upload-btn">Upload your Sunset </button>
     <input type="file" id="file-input" accept="image/jpeg, image/png, image/webp" />
 
     <div id="gallery-modal">
-        <span class="close-btn" id="close-btn">&times;</span>
+        <span class="close-btn" id="close-btn" onclick="closeGallery()">&times;</span> 
         <div id="gallery-content" class="gallery-grid"></div>
-        <div id="gallery-loading" class="loading-text" style="display: none;">Loading sunsets...</div>
+        <div id="gallery-loading" class="thematic-loader" style="display:none;">
+         <div class="loader-sun">🌅</div>
+         <p>Chasing the sun...</p>
+        </div>
+    </div>
+
+    <div id="lightbox-modal" class="lightbox">
+        <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
+        <button class="nav-btn prev-btn" onclick="prevImage()">&#10094;</button>
+        <img id="lightbox-img" src="" alt="Fullscreen Sunset">
+        <button class="nav-btn next-btn" onclick="nextImage()">&#10095;</button>
+        <div id="lightbox-date" class="lightbox-date"></div>
     </div>
 
     <div id="toast" class="toast"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=4"></script>
     
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
     <script>
     // Register the Service Worker
     if ('serviceWorker' in navigator) {
@@ -41,6 +50,6 @@
                 .catch(err => console.error('Service Worker failed:', err));
         });
     }
-</script>
+    </script>
 </body>
 </html>
