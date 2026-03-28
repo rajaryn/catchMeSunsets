@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>catchMeSunsets</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#ff5e3a">
+    <link rel="apple-touch-icon" href="/static/images/icon-192.png">
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <button class="upload-btn" id="upload-btn">📸 Upload Sunset Here</button>
+    <input type="file" id="file-input" accept="image/jpeg, image/png, image/webp" />
+
+    <div id="gallery-modal">
+        <span class="close-btn" id="close-btn">&times;</span>
+        <div id="gallery-content" class="gallery-grid"></div>
+        <div id="gallery-loading" class="loading-text" style="display: none;">Loading sunsets...</div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+    // Register the Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(reg => console.log('Service Worker registered!', reg.scope))
+                .catch(err => console.error('Service Worker failed:', err));
+        });
+    }
+</script>
+</body>
+</html>

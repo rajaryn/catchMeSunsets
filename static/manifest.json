@@ -1,0 +1,13 @@
+{
+  "name": "catchMeSunsets",
+  "short_name": "Sunsets",
+  "description": "Drop a pin and share the sunset.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ff5e3a",
+  "icons": [
+    { "src": "/static/images/icon_small.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/static/images/icon_big.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
