@@ -23,17 +23,23 @@ const toast = document.getElementById("toast");
 // --- Toast Logic ---
 function showToast(message, isError = false) {
   toast.innerText = message;
-  toast.style.background = isError ? "#e74c3c" : "#2ecc71";
+  
+  // Use signature orange for errors, dark gray for normal messages
+  toast.style.color = isError ? "#ff5e3a" : "#333";
+    
   toast.classList.add("show");
-  setTimeout(() => toast.classList.remove("show"), 3000);
+  
+  setTimeout(() => {
+      toast.classList.remove("show");
+  }, 3000);
 }
 
-// --- Custom Marker Design ---
+// --- Premium Map Marker ---
 const sunsetIcon = L.divIcon({
   className: "sunset-wrapper",
-  html: '<div class="sunset-marker">🌅</div>',
-  iconSize: [40, 40],
-  iconAnchor: [20, 20],
+  html: '<div class="premium-pin"></div>',
+  iconSize: [20, 20],   // The size of the dot + white border
+  iconAnchor: [10, 10], // Dead center (half of 20)
 });
 
 // --- 1. INITIAL LOAD ---
@@ -100,8 +106,8 @@ uploadBtn.addEventListener("click", () => {
         uploadBtn.disabled = false;
       },
       {
-        enableHighAccuracy: false,
-        timeout: 10000,
+        enableHighAccuracy: true,
+        timeout: 60000,
         maximumAge: 0,
       },
     );
@@ -167,18 +173,19 @@ fileInput.addEventListener("change", async (event) => {
 });
 
 // --- 4. GALLERY VIEW ---
-// --- 4. GALLERY VIEW ---
 async function openGallery(pinId) {
   // 1. Smoothly fade in the modal overlay
   galleryModal.classList.add("show-modal");
   galleryContent.innerHTML = "";
 
-  // 2. Reset and show the animated thematic loader in the center
+  // 2. Reset and show the animated Orbiting Ember loader
   galleryLoading.style.display = "flex";
-  galleryLoading.classList.remove("fade-out"); // Reset the fade state from previous views
+  galleryLoading.className = "fill-loader"; // Resets class, keeps it centered
+  galleryLoading.classList.remove("fade-out"); 
+  
+  // Inject the pure CSS Orbiting Ember
   galleryLoading.innerHTML = `
-    <div class="loader-sun">🌅</div>
-    <p>Catching the sunsets...</p>
+    <div class="orbiting-ember"></div>
   `;
 
   try {
@@ -245,7 +252,7 @@ async function openGallery(pinId) {
     // Ensure the loader is visible if there's an error so the user sees the message
     galleryLoading.classList.remove("fade-out"); 
     galleryLoading.style.display = "flex";
-    galleryLoading.innerHTML = `<p style="color:#ff5e3a;">Failed to catch the sun. Check your connection.</p>`;
+    galleryLoading.innerHTML = `<p style="color:#ff5e3a; text-align:center;">Failed to catch the sun.<br>Check your connection.</p>`;
   }
 }
 
@@ -304,6 +311,29 @@ closeBtn.addEventListener("click", () => {
   setTimeout(() => {
     galleryContent.innerHTML = "";
   }, 400);
+});
+
+// --- ABOUT DRAWER LOGIC ---
+const aboutBtn = document.getElementById("about-btn");
+const aboutDrawer = document.getElementById("about-drawer");
+const drawerOverlay = document.getElementById("drawer-overlay");
+
+// Open the drawer
+aboutBtn.addEventListener("click", () => {
+    aboutDrawer.classList.add("show");
+    drawerOverlay.classList.add("show");
+});
+
+// Close the drawer if they click the dark background overlay
+drawerOverlay.addEventListener("click", () => {
+    aboutDrawer.classList.remove("show");
+    drawerOverlay.classList.remove("show");
+});
+
+// Also close it if they swipe down on the drawer handle (simulated with a click for now)
+document.querySelector(".drawer-handle").addEventListener("click", () => {
+    aboutDrawer.classList.remove("show");
+    drawerOverlay.classList.remove("show");
 });
 
 window.onload = initApp;

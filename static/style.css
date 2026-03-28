@@ -15,17 +15,20 @@ html {
 }
 
 /* Floating Upload Button (Glassmorphism Style) */
+/* Floating Upload Button (Glassmorphism Style) */
 .upload-btn {
     position: absolute;
     bottom: 30px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 1000;
+
     background-color: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     color: #333;
     border: 1px solid rgba(255, 255, 255, 0.3);
+
     padding: 15px 30px;
     border-radius: 30px;
     font-size: 16px;
@@ -33,10 +36,17 @@ html {
     cursor: pointer;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
+
+    /* Forces single-line and prevents vertical stacking */
+    white-space: nowrap;
+    max-width: 90vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* Hover State: Signature Orange */
-.upload-btn:hover {
+/* Hover & Active States: Signature Orange */
+.upload-btn:hover,
+.upload-btn:active {
     background-color: #ff5e3a;
     color: white;
     transform: translateX(-50%) scale(1.05);
@@ -44,12 +54,12 @@ html {
     border-color: transparent;
 }
 
-.upload-btn:disabled {
-    background-color: rgba(200, 200, 200, 0.5);
-    color: #888;
-    cursor: not-allowed;
-    box-shadow: none;
-    backdrop-filter: none;
+/* --- Tiny Screen Adjustments --- */
+@media (max-width: 400px) {
+    .upload-btn {
+        padding: 12px 20px;
+        font-size: 14px;
+    }
 }
 
 #file-input {
@@ -59,89 +69,122 @@ html {
 /* --- Toast Notification --- */
 .toast {
     position: absolute;
-    top: -50px;
+    top: -100px;
+    opacity: 0;
     left: 50%;
     transform: translateX(-50%);
-    background: #2ecc71;
-    color: white;
+
+    /* Exact match to .top-pill frost */
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+
+    color: #333;
+    /* Dark text to match the pill */
     padding: 12px 24px;
-    border-radius: 20px;
+    border-radius: 30px;
     font-weight: bold;
+    font-size: 14px;
     z-index: 3000;
-    transition: top 0.4s ease-in-out;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+    width: max-content;
+    max-width: 85vw;
+    text-align: center;
+    line-height: 1.4;
 }
 
 .toast.show {
-    top: 20px;
+    top: max(20px, env(safe-area-inset-top));
+    opacity: 1;
 }
 
-/* --- Custom Pulsing Sunset Marker --- */
+/* --- Premium Radar Pin --- */
 .sunset-wrapper {
     background: transparent;
     border: none;
 }
 
-.sunset-marker {
-    font-size: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: radial-gradient(circle, rgba(255, 94, 58, 0.6) 0%, rgba(255, 94, 58, 0) 70%);
+.premium-pin {
+    width: 14px;
+    height: 14px;
+    background-color: #ff5e3a;
+    /* Signature Orange */
     border-radius: 50%;
-    animation: pulse 2s infinite;
+    border: 3px solid #ffffff;
+    /* Crisp white border for high contrast */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    position: relative;
+    /* Centers the pulse behind the dot */
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-@keyframes pulse {
-    0% {
-        transform: scale(0.9);
-        box-shadow: 0 0 0 0 rgba(255, 94, 58, 0.7);
-    }
+/* The expanding radar ring */
+.premium-pin::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: transparent;
+    border: 2px solid rgba(255, 94, 58, 0.8);
+    border-radius: 50%;
+    z-index: -1;
+    animation: radarPulse 2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
 
-    70% {
-        transform: scale(1.1);
-        box-shadow: 0 0 0 15px rgba(255, 94, 58, 0);
+@keyframes radarPulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
     }
 
     100% {
-        transform: scale(0.9);
-        box-shadow: 0 0 0 0 rgba(255, 94, 58, 0);
+        transform: scale(3.5);
+        /* Expands to 3.5x its size */
+        opacity: 0;
+        /* Fades out as it expands */
     }
 }
 
 /* --- Aesthetic Pinterest Gallery with Frosted Glass --- */
 #gallery-modal {
-    /* CHANGED: Replaced display: none with smooth transition properties */
     display: flex;
     opacity: 0;
     visibility: hidden;
     transform: translateY(20px);
     transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(10, 10, 10, 0.4);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
     z-index: 2000;
     flex-direction: column;
     align-items: center;
     overflow-y: auto;
     padding: 80px 20px 40px 20px;
     box-sizing: border-box;
+
+    /* ✅ NEW FROST EFFECT (LIGHT) */
+    /* Almost fully transparent white base */
+    background: rgba(255, 255, 255, 0.1);
+    /* Heavy blur to diffuse map colors */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    /* Subtle highlight border at the very top */
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-/* The active state toggled by JavaScript */
 #gallery-modal.show-modal {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
 }
 
-/* The Pinterest Magic: Column Layout */
 .gallery-grid {
     column-count: 2;
     column-gap: 15px;
@@ -161,17 +204,27 @@ html {
     display: inline-block;
     width: 100%;
     margin-bottom: 15px;
-    background: #1a1a1a;
+    /* ✅ LIGHTER BASE for light frost background */
+    background: rgba(255, 255, 255, 0.6);
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    /* ✅ SOFT SHADOW instead of hard dark one */
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
     position: relative;
     cursor: pointer;
-
-    /* CHANGED: Image Entrance Animation setup */
     opacity: 0;
     transform: translateY(30px);
     animation: fadeUp 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+/* Update text inside card for readability on lighter background */
+.image-date {
+    /* ... existing position/rounding/size rules ... */
+    background: rgba(255, 255, 255, 0.7);
+    /* Light background for date tag */
+    color: #333;
+    /* Dark text for date */
+    /* ... keep other styles ... */
 }
 
 @keyframes fadeUp {
@@ -194,7 +247,6 @@ html {
     height: 100%;
 }
 
-/* --- OVERLAY TIMESTAMP (Frosted Pill) --- */
 .image-date {
     position: absolute;
     bottom: 10px;
@@ -220,15 +272,29 @@ html {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(10, 10, 10, 0.4);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
     z-index: 3000;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-direction: column;
     transition: opacity 0.3s ease, visibility 0.3s ease;
+
+    /* Almost no base color, relies purely on the map below */
+    background: rgba(255, 255, 255, 0.02);
+    /* Extreme blur isolates the image completely */
+    backdrop-filter: blur(40px) saturate(1.8);
+    -webkit-backdrop-filter: blur(40px) saturate(1.8);
+}
+
+/* Update Lightbox date text color for light background */
+.lightbox-date {
+    margin-top: 20px;
+    color: #ffffff;
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+    z-index: 3100;
 }
 
 .lightbox.show {
@@ -241,9 +307,17 @@ html {
     max-height: 80vh;
     object-fit: contain;
     border-radius: 8px;
-    box-shadow: 0 10px 40px rgba(255, 94, 58, 0.3), 0 0 80px rgba(255, 94, 58, 0.1);
     transform: scale(0.95);
     transition: transform 0.3s ease;
+
+    /* ✅ THE FIXES: Intensified the opacity and spread of the orange glow */
+    box-shadow:
+        0 10px 50px rgba(255, 94, 58, 0.5),
+        /* Deeper core shadow */
+        0 0 100px rgba(255, 94, 58, 0.4),
+        /* Wider, brighter mid-glow */
+        0 0 20px rgba(255, 94, 58, 0.6);
+    /* Tight, intense inner rim */
 }
 
 .lightbox.show #lightbox-img {
@@ -254,21 +328,31 @@ html {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(5px);
-    color: white;
-    border: none;
+
+    /* ✅ THE FIX: Matches the close buttons exactly */
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #333;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+
     width: 50px;
     height: 50px;
     font-size: 20px;
     cursor: pointer;
     border-radius: 50%;
-    transition: background 0.2s;
     z-index: 3100;
+    transition: all 0.2s ease;
 }
 
 .nav-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 94, 58, 0.9);
+    color: white;
+    /* ✅ Flips to white on hover */
+    border-color: transparent;
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4);
 }
 
 .prev-btn {
@@ -292,95 +376,257 @@ html {
     position: absolute;
     top: 25px;
     right: 25px;
-    background: rgba(255, 255, 255, 0.15);
+
+    /* ✅ THE FIX: Thicker white frost, dark text, subtle border and shadow */
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #333;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+
     width: 45px;
     height: 45px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
     font-size: 28px;
     cursor: pointer;
     z-index: 3100;
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-    transition: background 0.2s ease, transform 0.2s ease;
-    line-height: 0;
-    padding-bottom: 3px;
+    transition: all 0.2s ease;
+    line-height: 1;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: monospace;
 }
 
-/* CHANGED: Fixed the stray comma syntax error here */
 .close-btn:hover,
 .lightbox-close:hover {
     background: rgba(255, 94, 58, 0.9);
+    color: white;
+    /* ✅ Flips back to white text on orange background */
+    border-color: transparent;
     transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4);
 }
 
-/* --- Thematic Sunset Loader --- */
-/* --- Thematic Sunset Loader --- */
-.thematic-loader {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    /* CHANGED: Position absolutely to perfectly center it in the modal */
+
+/* --- Orbiting Ember Loader --- */
+.fill-loader {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+    width: 100px;
+    height: 100px;
     z-index: 2010;
     transition: opacity 0.8s ease-in-out;
-    /* Slow fade effect */
     opacity: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-/* NEW: Class added via JS to trigger the fade */
-.thematic-loader.fade-out {
+.fill-loader.fade-out {
     opacity: 0;
     pointer-events: none;
 }
 
-.loader-sun {
-    font-size: 50px;
-    animation: floatingSun 2s ease-in-out infinite;
-    filter: drop-shadow(0 0 15px rgba(255, 94, 58, 0.6));
-    margin-bottom: 15px;
+.orbiting-ember {
+    width: 20px;
+    height: 20px;
+    background-color: #ff5e3a;
+    border-radius: 50%;
+    filter: drop-shadow(0 0 10px rgba(255, 94, 58, 0.8));
+    position: absolute;
+    animation: orbit 1.5s linear infinite;
 }
 
-.thematic-loader p {
+@keyframes orbit {
+    from {
+        transform: rotate(0deg) translateX(40px) rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg) translateX(40px) rotate(-360deg);
+    }
+}
+
+/* --- Floating Top Pill (Mobile First) --- */
+.top-pill {
+    position: absolute;
+    top: max(20px, env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+
+    padding: 10px 15px 10px 20px;
+    border-radius: 30px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+
+    width: 85%;
+    max-width: 400px;
+    transition: all 0.3s ease;
+}
+
+.brand-name {
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: #333;
+    letter-spacing: -0.5px;
+    transition: color 0.3s ease;
+}
+
+.brand-name span {
     color: #ff5e3a;
-    font-weight: 500;
-    letter-spacing: 1px;
-    font-size: 0.9rem;
-    opacity: 0.8;
-    animation: pulseText 2s ease-in-out infinite;
+    transition: color 0.3s ease;
 }
 
-/* Floating Animation */
-@keyframes floatingSun {
-    0% {
-        transform: translateY(0px) scale(1);
-    }
+.about-btn {
+    background: rgba(255, 94, 58, 0.15);
+    color: #ff5e3a;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
 
-    50% {
-        transform: translateY(-15px) scale(1.1);
-    }
+/* THE HOVER MAGIC FOR THE PILL */
+.top-pill:hover {
+    background-color: #ff5e3a;
+    border-color: transparent;
+    box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4);
+    transform: translateX(-50%) scale(1.02);
+}
 
-    100% {
-        transform: translateY(0px) scale(1);
+.top-pill:hover .brand-name,
+.top-pill:hover .brand-name span {
+    color: white;
+}
+
+.top-pill:hover .about-btn {
+    background: white;
+    color: #ff5e3a;
+}
+
+/* --- Bottom Sheet Drawer (About Page) --- */
+.drawer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 3400;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.drawer-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.about-drawer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+
+    background: rgba(10, 10, 10, 0.55);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+
+    z-index: 3500;
+    border-top-left-radius: 30px;
+    border-top-right-radius: 30px;
+    padding: 20px 30px 50px 30px;
+    box-sizing: border-box;
+    color: white;
+
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
+
+    /* ✅ THE FIX: Put the height limit and scroll on the container itself */
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.about-drawer.show {
+    transform: translateY(0);
+}
+
+.drawer-handle {
+    width: 40px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 5px;
+    margin: 0 auto 20px auto;
+}
+
+.about-drawer h2 {
+    margin-top: 0;
+    color: #ff5e3a;
+    font-size: 1.5rem;
+}
+
+.about-drawer p {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #ddd;
+}
+
+.built-with {
+    margin-top: 30px;
+    font-size: 0.8rem !important;
+    color: #888 !important;
+    text-align: center;
+}
+
+/* --- Hide Zoom Controls on Mobile --- */
+@media (max-width: 768px) {
+    .leaflet-control-zoom {
+        display: none !important;
     }
 }
 
-/* Breathing Text Animation */
-@keyframes pulseText {
+.about-content p {
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    font-size: 1.05rem;
+}
 
-    0%,
-    100% {
-        opacity: 0.5;
+.about-content em {
+    color: #ff5e3a;
+    /* Brings a touch of your sunset orange to the opening line */
+}
+
+@media (max-width: 600px) {
+    .about-content p {
+        font-size: 0.9rem;
+        line-height: 1.4;
+        margin-bottom: 0.8rem;
     }
 
-    50% {
-        opacity: 1;
+    .about-drawer h2 {
+        font-size: 1.4rem;
+        margin-bottom: 0.8rem;
+        /* Removed the bad overflow and height lines from here */
     }
 }
