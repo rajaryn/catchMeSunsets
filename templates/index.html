@@ -7,9 +7,12 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#ff5e3a">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#fffcfb">
     <link rel="apple-touch-icon" href="/static/images/icon-192.png">
+    
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 </head>
 <body>
@@ -21,30 +24,26 @@
     <div id="drawer-overlay" class="drawer-overlay"></div> 
     
     <div id="about-drawer" class="about-drawer">
-    <div class="drawer-handle"></div>
-    <h2>It started with a simple conversation.</h2>
-    <div class="about-content">
-        <p>We realized how easy it is to miss a sunset while caught up in the blur of everyday life. We wanted a way to freeze that golden hour—and more importantly, we needed a place to go to watch the sun go down when we inevitably missed it ourselves.</p>
-        <p>That is how <strong>catchMeSunsets</strong> was born.</p>
-        <p>There are no profiles here. No followers, no egos, no noise. It is completely anonymous by design. Every pin on this map is just a quiet moment where someone, somewhere, stopped to look up at the sky and decided to share it with you.</p>
-        <p>Drop a pin. Share your sky. Catch the sunsets you missed.</p>
-        
-        <p class="built-with">Built with 🧡</p>
+        <div class="drawer-handle"></div>
+        <h2>It started with a simple conversation.</h2>
+        <div class="about-content">
+            <p>We realized how easy it is to miss a sunset while caught up in the blur of everyday life. We wanted a way to freeze that golden hour—and more importantly, we needed a place to go to watch the sun go down when we inevitably missed it ourselves.</p>
+            <p>That is how <strong>catchMeSunsets</strong> was born.</p>
+            <p>There are no profiles here. No followers, no egos, no noise. It is completely anonymous by design. Every pin on this map is just a quiet moment where someone, somewhere, stopped to look up at the sky and decided to share it with you.</p>
+            <p>Drop a pin. Share your sky. Catch the sunsets you missed.</p>
+            <p class="built-with">Built with 🧡</p>
+        </div>
     </div>
-</div>
 
     <div id="map"></div>
 
-    <button class="upload-btn" id="upload-btn">Upload your Sunset </button>
+    <button class="upload-btn" id="upload-btn">Upload your Sunset</button>
     <input type="file" id="file-input" accept="image/jpeg, image/png, image/webp" />
 
     <div id="gallery-modal">
-        <span class="close-btn" id="close-btn" onclick="closeGallery()">&times;</span> 
+        <span class="close-btn" id="close-btn">&times;</span> 
         <div id="gallery-content" class="gallery-grid"></div>
-        <div id="gallery-loading" class="thematic-loader" style="display:none;">
-         <div class="loader-sun">🌅</div>
-         <p>Chasing the sun...</p>
-        </div>
+        <div id="gallery-loading" class="thematic-loader" style="display:none;"></div>
     </div>
 
     <div id="lightbox-modal" class="lightbox">
@@ -61,7 +60,6 @@
     <script src="{{ url_for('static', filename='script.js') }}?v=4"></script>
     
     <script>
-    // Register the Service Worker
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('/service-worker.js')

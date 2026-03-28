@@ -87,7 +87,7 @@ uploadBtn.addEventListener("click", () => {
   }
 
   if (navigator.geolocation) {
-    uploadBtn.innerText = "📍 Locating...";
+    uploadBtn.innerText = "Locating...";
     uploadBtn.disabled = true;
 
     navigator.geolocation.getCurrentPosition(
@@ -144,7 +144,7 @@ fileInput.addEventListener("change", async (event) => {
     }
   }
 
-  uploadBtn.innerText = "☁️ Uploading...";
+  uploadBtn.innerText = "Uploading...";
 
   const formData = new FormData();
   formData.append("image", file);
@@ -158,7 +158,7 @@ fileInput.addEventListener("change", async (event) => {
     });
     if (response.ok) {
       await fetchAllPins();
-      showToast("Sunset captured successfully! 🌅");
+      showToast("Sunset captured successfully!");
     } else {
       const errorData = await response.json();
       showToast("Upload failed: " + (errorData.error || "Unknown error"), true);
