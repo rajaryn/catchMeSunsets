@@ -47,10 +47,9 @@ def serve_manifest():
 def serve_sw():
     return send_from_directory('static', 'service_worker.js')
 
-# --- API Routes ---
-@app.route('/test', methods=['GET'])
-def test_server():
-    return jsonify({"status": "Sunsets API is running!"}), 200
+@app.route('/images/<path:filename>')
+def custom_static(filename):
+    return send_from_directory('static/images', filename)
 
 @app.route('/upload', methods=['POST'])
 def upload():
