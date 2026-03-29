@@ -9,6 +9,9 @@ html {
 }
 
 #map {
+    position: absolute;
+    top: 0;
+    left: 0;
     height: 100vh;
     width: 100vw;
     z-index: 1;
@@ -195,29 +198,6 @@ html {
     animation: fadeUp 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
 }
 
-.image-date {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    color: #333;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    letter-spacing: 0.5px;
-    pointer-events: none;
-}
-
-@keyframes fadeUp {
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
 .image-card:hover {
     transform: scale(1.02);
 }
@@ -229,6 +209,66 @@ html {
     object-fit: cover;
     object-position: center;
     height: 100%;
+}
+
+/* --- Gallery Image Badges & Dates --- */
+/* --- Gallery Image Badges (Sun/Moon) --- */
+.type-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid transparent;
+
+    padding: 6px 8px;
+    border-radius: 15px;
+    font-size: 0.85rem;
+    pointer-events: none;
+    z-index: 10;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+/* Dark Mode Override for the Emoji Badge */
+body.dark-mode .type-badge {
+    background: rgba(0, 0, 0, 0.5);
+    /* Deep dark frost */
+    border-color: rgba(255, 255, 255, 0.15);
+    /* Subtle glass edge */
+}
+
+.image-date {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #333;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    pointer-events: none;
+    transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    border: 1px solid transparent;
+}
+
+/* 🌙 Dark Mode Override for Date Pill */
+body.dark-mode .image-date {
+    background: rgba(0, 0, 0, 0.5);
+    color: #e0e0e0;
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+@keyframes fadeUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .lightbox {
@@ -399,43 +439,122 @@ html {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 20px;
     background: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     border: 1px solid rgba(255, 255, 255, 0.3);
-    padding: 10px 15px 10px 20px;
+    padding: 8px 12px 8px 20px;
     border-radius: 30px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    width: 85%;
-    max-width: 400px;
+    width: max-content;
+    max-width: 90vw;
     transition: all 0.3s ease;
 }
 
-.brand-name {
-    font-weight: 800;
-    font-size: 1.1rem;
-    color: #333;
-    letter-spacing: -0.5px;
-    transition: color 0.3s ease;
-}
-
-.brand-name span {
-    color: #ff5e3a;
-    transition: color 0.3s ease;
-}
-
-.about-btn {
-    background: rgba(255, 94, 58, 0.15);
-    color: #ff5e3a;
+/* --- The Brand Button --- */
+.brand-link {
+    background: transparent;
     border: none;
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-weight: bold;
-    font-size: 0.85rem;
+    padding: 0;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: #333;
+    letter-spacing: 0.5px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: color 0.3s ease;
+    outline: none;
+    position: relative;
 }
 
+.brand-link span {
+    color: #ff5e3a;
+    transition: color 0.3s ease;
+}
+
+/* --- The Poetic Tooltip (No Animation, Elegant Font) --- */
+.brand-link::after {
+    content: 'read the story';
+    position: absolute;
+    top: 45px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Georgia', serif;
+    font-style: italic;
+    font-size: 0.85rem;
+    font-weight: normal;
+    color: #ff5e3a;
+    opacity: 0;
+    white-space: nowrap;
+    pointer-events: none;
+    transition: opacity 0.2s ease, color 0.3s ease;
+}
+
+body.dark-mode .brand-link::after {
+    content: 'read the story';
+    color: #e0e0e0;
+}
+
+/* Reliably triggers on hover (desktop) or tap (mobile) */
+.brand-link:hover::after,
+.brand-link:active::after {
+    opacity: 0.9;
+}
+
+/* --- The New Dark Mode Button --- */
+.theme-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    font-size: 1.1rem;
+    cursor: pointer;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    padding: 0;
+    line-height: 1;
+    position: relative;
+}
+
+.theme-btn:hover {
+    background: rgba(255, 255, 255, 0.4);
+    transform: scale(1.1);
+}
+
+/* --- The Theme Toggle Hint --- */
+.theme-btn::after {
+    content: 'switch to dark mode';
+    position: absolute;
+    top: 45px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Georgia', serif;
+    font-style: italic;
+    font-size: 0.85rem;
+    font-weight: normal;
+    color: #ff5e3a;
+    opacity: 0;
+    white-space: nowrap;
+    pointer-events: none;
+    transition: opacity 0.2s ease, color 0.3s ease;
+}
+
+body.dark-mode .theme-btn::after {
+    content: 'switch to light mode';
+    color: #e0e0e0;
+}
+
+/* Reliably triggers on hover or tap */
+.theme-btn:hover::after,
+.theme-btn:active::after {
+    opacity: 0.9;
+}
+
+/* THE HOVER MAGIC FOR THE PILL */
 .top-pill:hover,
 .top-pill:active {
     background-color: #ff5e3a !important;
@@ -444,17 +563,19 @@ html {
     transform: translateX(-50%) scale(1.02);
 }
 
-.top-pill:hover .brand-name,
-.top-pill:hover .brand-name span,
-.top-pill:active .brand-name,
-.top-pill:active .brand-name span {
+.top-pill:hover .brand-link,
+.top-pill:hover .brand-link span,
+.top-pill:active .brand-link,
+.top-pill:active .brand-link span {
     color: white !important;
 }
 
-.top-pill:hover .about-btn,
-.top-pill:active .about-btn {
-    background: white !important;
-    color: #ff5e3a !important;
+/* Make the theme button pop on pill hover */
+.top-pill:hover .theme-btn,
+.top-pill:active .theme-btn {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+    color: white !important;
 }
 
 .drawer-overlay {
@@ -542,28 +663,21 @@ html {
 /* --- Upload Action Sheet Buttons --- */
 .action-btn {
     width: 100%;
-
-    /* 1. Exact Frosted Glass Finish of the Top Pill */
     background: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     border: 1px solid rgba(255, 255, 255, 0.3);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     color: white;
-    /* Keeps text crisp against the dark drawer */
-
-    /* 2. Exact Shape & Typography of the Main Upload Button */
     padding: 15px 30px;
     border-radius: 30px;
     font-size: 16px;
     font-weight: bold;
     margin-bottom: 15px;
-
     cursor: pointer;
     transition: all 0.3s ease;
 }
 
-/* Hover, Active & Focus States: Signature Orange */
 .action-btn:hover,
 .action-btn:active,
 .action-btn:focus {
@@ -572,4 +686,81 @@ html {
     border-color: transparent !important;
     box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4) !important;
     transform: scale(1.02) !important;
+}
+
+/* --- DARK MODE & MOON STYLES --- */
+body.dark-mode {
+    background-color: #0d1117;
+}
+
+/* Target the new .brand-link in Dark Mode */
+body.dark-mode .brand-link {
+    color: #e6e6e6;
+}
+
+body.dark-mode .leaflet-layer,
+body.dark-mode .leaflet-control-zoom-in,
+body.dark-mode .leaflet-control-zoom-out {
+    filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
+body.dark-mode .theme-btn {
+    color: #fff;
+}
+
+/* --- Master Mobile & Tablet Optimization --- */
+@media (max-width: 768px) {
+
+    /* 1. Hide Desktop Controls */
+    .leaflet-control-zoom,
+    .nav-btn,
+    .lightbox-close {
+        display: none !important;
+    }
+
+    /* 2. Give the drawer text more horizontal room */
+    .about-drawer {
+        padding: 20px 20px 40px 20px;
+    }
+
+    /* 3. Scale down the headings */
+    .about-drawer h2 {
+        font-size: 1.3rem;
+        margin-bottom: 10px;
+    }
+
+    #upload-sheet h2 {
+        font-size: 1.15rem !important;
+    }
+
+    /* 4. Make the story text perfectly readable */
+    .about-content p {
+        font-size: 0.95rem;
+        line-height: 1.5;
+        margin-bottom: 0.9rem;
+    }
+
+    /* 5. Shrink the signature and buttons */
+    .built-with {
+        font-size: 0.75rem !important;
+        margin-top: 20px;
+    }
+
+    .action-btn {
+        font-size: 15px;
+        padding: 12px 20px;
+    }
+
+    /* 6. Fix overlapping gallery badges on small screens */
+    .image-date {
+        top: auto !important;
+        bottom: 10px !important;
+        font-size: 0.65rem;
+        padding: 4px 8px;
+    }
+
+    .type-badge {
+        font-size: 0.75rem;
+        padding: 4px 6px;
+    }
 }

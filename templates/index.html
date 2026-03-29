@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>catchMeSunsets</title>
+    <title>Vesper</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=12" />
     
     <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,34 +15,56 @@
 </head>
 <body>
     <div class="top-pill">
-        <div class="brand-name">catchMe<span>Sunsets</span></div>
-        <button id="about-btn" class="about-btn">About</button>
+        <button id="about-btn" class="brand-link">
+            Vesper
+        </button>
+        <div style="display: flex; align-items: center;">
+            <button id="theme-toggle" class="theme-btn">🌙</button>
+        </div>
     </div>
 
     <div id="drawer-overlay" class="drawer-overlay"></div> 
     
     <div id="about-drawer" class="about-drawer">
         <div class="drawer-handle"></div>
-        <h2>It started with a simple conversation.</h2>
+        <h2>About Vesper</h2>
         <div class="about-content">
-            <p>We realized how easy it is to miss a sunset while caught up in the blur of everyday life. We wanted a way to freeze that golden hour—and more importantly, we needed a place to go to watch the sun go down when we inevitably missed it ourselves.</p>
-            <p>That is how <strong>catchMeSunsets</strong> was born.</p>
-            <p>There are no profiles here. No followers, no egos, no noise. It is completely anonymous by design. Every pin on this map is just a quiet moment where someone, somewhere, stopped to look up at the sky and decided to share it with you.</p>
-            <p>Drop a pin. Share your sky. Catch the sunsets you missed.</p>
-            <p class="built-with">Built with 🧡</p>
-        </div>
-    </div>
+            <p style="text-align: center; margin-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px;">
+                <em style="color: #ff5e3a; font-size: 1.15rem; letter-spacing: 0.5px;"><strong>vesper</strong> (n.) — the evening star; twilight.</em>
+            </p>
 
-    <div id="upload-sheet" class="about-drawer" style="padding-bottom: 40px; z-index: 3600;">
+            <p>It started with a simple realization. Between the endless demands of my computer science degree and the daily blur of organizing college placements, I realized how incredibly easy it is to miss a fleeting sunset or a quiet, brilliant moon.</p>
+            
+            <p>I wanted a way to freeze that twilight—and more importantly, I needed a place to go to watch the sky change when I inevitably missed it myself. That is how <strong>Vesper</strong> was born.</p>
+            
+            <p>There are no profiles here. No followers, no egos, no noise. It is completely anonymous by design. Every pin on this map is just a quiet moment where someone, somewhere, stopped to look up at the sky and decided to share it with you.</p>
+            
+            <p>Drop a pin. Share your sky. Catch the views you missed.</p>
+            
+            <p class="built-with">
+                Built with 🧡 & 🌙
+            </p>
+        </div>
+    </div> <div id="upload-sheet" class="about-drawer" style="padding-bottom: 40px; z-index: 3600;">
         <div class="drawer-handle" id="upload-handle"></div>
-        <h2 style="text-align: center; margin-bottom: 25px; font-size: 1.3rem;">Capture the Moment</h2>
+        <h2 style="text-align: center; margin-bottom: 15px; font-size: 1.3rem;">Capture the Moment</h2>
+        
+        <div class="type-selector" style="display: flex; justify-content: center; gap: 15px; margin-bottom: 25px;">
+            <label style="color: white; font-weight: bold; cursor: pointer;">
+                <input type="radio" name="capture_type" value="sun" checked> Sunset
+            </label>
+            <label style="color: white; font-weight: bold; cursor: pointer;">
+                <input type="radio" name="capture_type" value="moon"> Moon
+            </label>
+        </div>
+
         <button class="action-btn" id="btn-camera">Take Photo Now</button>
         <button class="action-btn" id="btn-gallery">Choose from Gallery</button>
     </div>
 
     <div id="map"></div>
 
-    <button class="upload-btn" id="upload-btn">Upload your Sunset</button>
+    <button class="upload-btn" id="upload-btn">Upload your moment</button>
     
     <input type="file" id="file-input-gallery" accept="image/jpeg, image/png, image/webp, image/heic" style="display: none;" />
     <input type="file" id="file-input-camera" accept="image/jpeg, image/png, image/webp, image/heic" capture="environment" style="display: none;" />
@@ -64,7 +86,7 @@
     <div id="toast" class="toast"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-    <script src="{{ url_for('static', filename='script.js') }}?v=6" defer></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=12" defer></script>
     
     <script>
     if ('serviceWorker' in navigator) {

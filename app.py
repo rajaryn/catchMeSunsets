@@ -13,7 +13,6 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-
 app = Flask(__name__)
 CORS(app)
 
@@ -105,6 +104,7 @@ def upload():
     file = request.files['image']
     lat_str = request.form.get('lat')
     lon_str = request.form.get('lon')
+    capture_type = request.form.get('capture_type', 'sun')
 
     if not file or file.filename == '' or not lat_str or not lon_str:
         return jsonify({'error': 'Missing required data'}), 400
@@ -125,7 +125,7 @@ def upload():
         # Extract the secure HTTPS URL provided by Cloudinary
         image_url = upload_result.get('secure_url')
     except Exception as e:
-        print(f"🔥 CLOUDINARY ERROR: {e}") # <--- ADD THIS LINE
+        print(f"🔥 CLOUDINARY ERROR: {e}") 
         return jsonify({'error': 'Cloudinary upload failed', 'details': str(e)}), 500
 
     # 3. Database Transaction
@@ -146,10 +146,10 @@ def upload():
             cursor.execute("INSERT INTO pins (lat, lon) VALUES (%s, %s)", (lat, lon))
             pin_id = cursor.lastrowid
 
-        # Insert the absolute Cloudinary URL into the database
+        # Insert the absolute Cloudinary URL AND capture_type into the database
         cursor.execute(
-            "INSERT INTO images (pin_id, file_path) VALUES (%s, %s)",
-            (pin_id, image_url)
+            "INSERT INTO images (pin_id, file_path, capture_type) VALUES (%s, %s, %s)",
+            (pin_id, image_url, capture_type)
         )
 
         conn.commit()
@@ -178,7 +178,6 @@ def get_pins():
         # 2. The IF/ELSE Check
         if lat and lon:
             # If they provide a location, fetch pins ordered by distance 
-            # (Replace this query with your exact previous one if it was different)
             query = """
                 SELECT id, lat, lon, created_at,
                 ( 3959 * acos( cos( radians(%s) ) * cos( radians( lat ) ) * cos( radians( lon ) - radians(%s) ) + sin( radians(%s) ) * sin( radians( lat ) ) ) ) AS distance 
@@ -204,6 +203,9 @@ def get_pins():
         
 @app.route('/pins/<int:pin_id>', methods=['GET'])
 def get_gallery(pin_id):
+    # Get the requested type (defaults to 'sun')
+    req_type = request.args.get('type', 'sun')
+
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -211,9 +213,10 @@ def get_gallery(pin_id):
         return jsonify({'error': 'Database connection failed'}), 500
 
     try:
+        # Filter by BOTH pin_id and capture_type
         cursor.execute(
-            "SELECT id, file_path, uploaded_at FROM images WHERE pin_id = %s ORDER BY uploaded_at DESC",
-            (pin_id,)
+            "SELECT id, file_path, uploaded_at FROM images WHERE pin_id = %s AND capture_type = %s ORDER BY uploaded_at DESC",
+            (pin_id, req_type)
         )
         images = cursor.fetchall()
         

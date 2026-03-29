@@ -88,14 +88,12 @@ async function fetchAllPins() {
 
 // --- 2. MAIN UPLOAD BUTTON CLICK ---
 uploadBtn.addEventListener("click", () => {
-  // If we already have location, just show the choice drawer
   if (currentUserLat && currentUserLon) {
     uploadSheet.classList.add("show");
     drawerOverlay.classList.add("show");
     return;
   }
 
-  // Otherwise, get location first
   if (navigator.geolocation) {
     uploadBtn.innerText = "Locating...";
     uploadBtn.disabled = true;
@@ -108,7 +106,6 @@ uploadBtn.addEventListener("click", () => {
         uploadBtn.innerText = "Select Photo";
         uploadBtn.disabled = false;
 
-        // Open the choice drawer
         uploadSheet.classList.add("show");
         drawerOverlay.classList.add("show");
       },
@@ -133,7 +130,6 @@ uploadBtn.addEventListener("click", () => {
 btnCamera.addEventListener("click", () => fileInputCamera.click());
 btnGallery.addEventListener("click", () => fileInputGallery.click());
 
-// Close action sheet on handle click
 uploadHandle.addEventListener("click", () => {
   uploadSheet.classList.remove("show");
   drawerOverlay.classList.remove("show");
@@ -161,7 +157,6 @@ const handleFileSelection = async (event) => {
   let file = event.target.files[0];
   if (!file) return;
 
-  // Immediately hide the drawer
   uploadSheet.classList.remove("show");
   drawerOverlay.classList.remove("show");
 
@@ -169,7 +164,6 @@ const handleFileSelection = async (event) => {
   uploadBtn.innerText = "⏳ Processing...";
   uploadBtn.disabled = true;
 
-  // Lazy load HEIC processing if required
   if (file.name.toLowerCase().endsWith(".heic") || file.type === "image/heic") {
     try {
       showToast("Loading Apple Image Engine...");
@@ -200,6 +194,11 @@ const handleFileSelection = async (event) => {
   formData.append("lat", currentUserLat);
   formData.append("lon", currentUserLon);
 
+  const selectedType =
+    document.querySelector('input[name="capture_type"]:checked')?.value ||
+    "sun";
+  formData.append("capture_type", selectedType);
+
   try {
     const response = await fetch(`${API_BASE}/upload`, {
       method: "POST",
@@ -207,7 +206,8 @@ const handleFileSelection = async (event) => {
     });
     if (response.ok) {
       await fetchAllPins();
-      showToast("Sunset captured successfully!");
+      const successWord = selectedType === "moon" ? "Moon" : "Sunset";
+      showToast(`${successWord} captured successfully!`);
     } else {
       const errorData = await response.json();
       showToast("Upload failed: " + (errorData.error || "Unknown error"), true);
@@ -217,7 +217,6 @@ const handleFileSelection = async (event) => {
   } finally {
     uploadBtn.innerText = "Upload Another";
     uploadBtn.disabled = false;
-    // Reset inputs
     fileInputCamera.value = "";
     fileInputGallery.value = "";
   }
@@ -226,6 +225,7 @@ const handleFileSelection = async (event) => {
 fileInputGallery.addEventListener("change", handleFileSelection);
 fileInputCamera.addEventListener("change", handleFileSelection);
 
+// --- 5. GALLERY VIEW LOGIC ---
 // --- 5. GALLERY VIEW LOGIC ---
 async function openGallery(pinId) {
   galleryModal.classList.add("show-modal");
@@ -236,6 +236,7 @@ async function openGallery(pinId) {
   galleryLoading.innerHTML = `<div class="orbiting-ember"></div>`;
 
   try {
+    // ✅ THE FIX: We removed the ?type= filter. Now it fetches ALL photos for this pin!
     const response = await fetch(`${API_BASE}/pins/${pinId}`);
     if (!response.ok) throw new Error("Failed to fetch gallery");
 
@@ -246,8 +247,8 @@ async function openGallery(pinId) {
     }, 800);
 
     if (images.length === 0) {
-      galleryContent.innerHTML =
-        '<p style="color:white; text-align:center; width:100%; margin-top: 60px;">No sunsets caught here yet.</p>';
+      // ✅ THE FIX: A universal, poetic message
+      galleryContent.innerHTML = `<p style="color:white; text-align:center; width:100%; margin-top: 60px;">No skies caught here yet.</p>`;
       return;
     }
 
@@ -258,6 +259,11 @@ async function openGallery(pinId) {
       card.className = "image-card";
       card.style.animationDelay = `${index * 0.1}s`;
       card.onclick = () => openLightbox(index);
+
+      // ✅ THE FIX: Generate the Sun/Moon badge based on the database
+      const typeBadge = document.createElement("div");
+      typeBadge.className = "type-badge";
+      typeBadge.innerText = img.capture_type === "moon" ? "🌙" : "☀️";
 
       const imgElement = document.createElement("img");
       imgElement.src = img.file_path;
@@ -279,7 +285,10 @@ async function openGallery(pinId) {
       });
 
       dateElement.innerText = localDate;
+      
+      // Append everything to the card
       card.appendChild(imgElement);
+      card.appendChild(typeBadge); // Add the badge!
       card.appendChild(dateElement);
       galleryContent.appendChild(card);
     });
@@ -287,7 +296,7 @@ async function openGallery(pinId) {
     console.error("Gallery Error:", error);
     galleryLoading.classList.remove("fade-out");
     galleryLoading.style.display = "flex";
-    galleryLoading.innerHTML = `<p style="color:#ff5e3a; text-align:center;">Failed to catch the sun.<br>Check your connection.</p>`;
+    galleryLoading.innerHTML = `<p style="color:#ff5e3a; text-align:center;">Failed to catch the view.<br>Check your connection.</p>`;
   }
 }
 
@@ -387,9 +396,62 @@ drawerOverlay.addEventListener("click", () => {
   drawerOverlay.classList.remove("show");
 });
 
-document.querySelector(".drawer-handle").addEventListener("click", () => {
-  aboutDrawer.classList.remove("show");
-  drawerOverlay.classList.remove("show");
-});
+// FIXED: Targeting the specific handle in the about drawer so it doesn't conflict with the upload sheet
+document
+  .querySelector("#about-drawer .drawer-handle")
+  .addEventListener("click", () => {
+    aboutDrawer.classList.remove("show");
+    drawerOverlay.classList.remove("show");
+  });
 
-window.onload = initApp;
+// --- 8. SYSTEM-WIDE DARK MODE TOGGLE LOGIC ---
+function initThemeLogic() {
+  const themeToggle = document.getElementById("theme-toggle");
+  const body = document.body;
+
+  if (!themeToggle) {
+    console.error("Theme toggle button not found in the HTML!");
+    return;
+  }
+
+  function applyTheme(isDark) {
+    if (isDark) {
+      body.classList.add("dark-mode");
+      themeToggle.innerText = "☀️";
+    } else {
+      body.classList.remove("dark-mode");
+      themeToggle.innerText = "🌙";
+    }
+  }
+
+  const savedTheme = localStorage.getItem("theme");
+  const systemPrefersDark = window.matchMedia(
+    "(prefers-color-scheme: dark)",
+  ).matches;
+
+  if (savedTheme === "dark" || (!savedTheme && systemPrefersDark)) {
+    applyTheme(true);
+  } else {
+    applyTheme(false);
+  }
+
+  themeToggle.addEventListener("click", () => {
+    const isCurrentlyDark = body.classList.contains("dark-mode");
+    applyTheme(!isCurrentlyDark);
+    localStorage.setItem("theme", !isCurrentlyDark ? "dark" : "light");
+  });
+
+  window
+    .matchMedia("(prefers-color-scheme: dark)")
+    .addEventListener("change", (e) => {
+      if (!localStorage.getItem("theme")) {
+        applyTheme(e.matches);
+      }
+    });
+}
+
+// FIXED: Consolidated window.onload to fire both initializing functions
+window.onload = () => {
+  initApp();
+  initThemeLogic();
+};
