@@ -311,35 +311,52 @@ function closeLightbox() {
   lightboxModal.classList.remove("show");
 }
 
-function updateLightboxView() {
+function updateLightboxView(direction = "none") {
   const img = currentGalleryImages[currentImageIndex];
-  lightboxImg.src = img.file_path;
 
-  const safeDateString = img.uploaded_at.replace(" ", "T");
-  const utcString = safeDateString.endsWith("Z")
-    ? safeDateString
-    : safeDateString + "Z";
-  const localDate = new Date(utcString).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  // 1. Fade out and slide the current image out of the way
+  lightboxImg.style.opacity = "0";
+  if (direction === "next")
+    lightboxImg.style.transform = "translateX(-30px) scale(0.95)";
+  else if (direction === "prev")
+    lightboxImg.style.transform = "translateX(30px) scale(0.95)";
+  else lightboxImg.style.transform = "scale(0.95)";
 
-  lightboxDate.innerText = localDate;
+  setTimeout(() => {
+    // 2. Swap the photo and date while it is faded out
+    lightboxImg.src = img.file_path;
+
+    const safeDateString = img.uploaded_at.replace(" ", "T");
+    const utcString = safeDateString.endsWith("Z")
+      ? safeDateString
+      : safeDateString + "Z";
+    const localDate = new Date(utcString).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    lightboxDate.innerText = localDate;
+
+    // 3. Glide the new photo into the center once it finishes loading
+    lightboxImg.onload = () => {
+      lightboxImg.style.opacity = "1";
+      lightboxImg.style.transform = "translateX(0) scale(1)";
+    };
+  }, 200); // 200ms gives the fade-out time to finish
 }
 
 function prevImage() {
   currentImageIndex--;
   if (currentImageIndex < 0)
     currentImageIndex = currentGalleryImages.length - 1;
-  updateLightboxView();
+  updateLightboxView("prev"); // Pass the swipe direction
 }
 
 function nextImage() {
   currentImageIndex++;
   if (currentImageIndex >= currentGalleryImages.length) currentImageIndex = 0;
-  updateLightboxView();
+  updateLightboxView("next"); // Pass the swipe direction
 }
 
 lightboxModal.addEventListener("click", (e) => {
@@ -415,12 +432,17 @@ function initThemeLogic() {
   }
 
   function applyTheme(isDark) {
+    // Grab the meta tag that controls the phone's top status bar
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+
     if (isDark) {
       body.classList.add("dark-mode");
       themeToggle.innerText = "☀️";
+      if (themeMeta) themeMeta.setAttribute("content", "#0d1117"); // Dark mode status bar
     } else {
       body.classList.remove("dark-mode");
       themeToggle.innerText = "🌙";
+      if (themeMeta) themeMeta.setAttribute("content", "#fffcfb"); // Light mode status bar
     }
   }
 

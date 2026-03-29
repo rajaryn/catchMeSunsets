@@ -78,6 +78,16 @@ def get_cloudinary_public_id(url):
         print(f"Error parsing Cloudinary URL: {e}")
     return None
 
+@app.errorhandler(500)
+def server_error(e):
+    # Make sure to put the 500.html file inside your 'templates' folder
+    return render_template('offline.html'), 500
+
+@app.route('/offline.html')
+def offline():
+    # This lets the Service Worker grab the page to store it
+    return render_template('offline.html')
+
 # --- Frontend Serving Routes ---
 @app.route('/', methods=['GET'])
 def index():
@@ -87,7 +97,7 @@ def index():
 def serve_manifest():
     return send_from_directory('static', 'manifest.json')
 
-@app.route('/service-worker.js')
+@app.route('/service_worker.js')
 def serve_sw():
     return send_from_directory('static', 'service_worker.js')
 
@@ -203,20 +213,17 @@ def get_pins():
         
 @app.route('/pins/<int:pin_id>', methods=['GET'])
 def get_gallery(pin_id):
-    # Get the requested type (defaults to 'sun')
-    req_type = request.args.get('type', 'sun')
-
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-
     if not conn:
         return jsonify({'error': 'Database connection failed'}), 500
 
+    cursor = conn.cursor(dictionary=True)
+
     try:
-        # Filter by BOTH pin_id and capture_type
+        
         cursor.execute(
-            "SELECT id, file_path, uploaded_at FROM images WHERE pin_id = %s AND capture_type = %s ORDER BY uploaded_at DESC",
-            (pin_id, req_type)
+            "SELECT id, file_path, uploaded_at, capture_type FROM images WHERE pin_id = %s ORDER BY uploaded_at DESC",
+            (pin_id,)
         )
         images = cursor.fetchall()
         
@@ -230,7 +237,7 @@ def get_gallery(pin_id):
     finally:
         cursor.close()
         conn.close()
-
+        
 # --- ADMIN & MODERATION ROUTES ---
 
 @app.route('/admin')
