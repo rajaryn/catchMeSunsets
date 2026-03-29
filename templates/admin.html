@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | catchMeSunsets</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #fff;
+            margin: 0;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        h1 { color: #ff5e3a; }
+        .pin-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .pin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 15px;
+        }
+        .danger-btn {
+            background: rgba(255, 58, 58, 0.2);
+            color: #ff3a3a;
+            border: 1px solid rgba(255, 58, 58, 0.4);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .danger-btn:hover {
+            background: #ff3a3a;
+            color: white;
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        .image-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .image-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            display: block;
+        }
+        .delete-img-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+        }
+        .delete-img-btn:hover { background: #ff3a3a; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dashboard / Moderation</h1>
+        <p>Manage pins and uploaded images.</p>
+        <div id="admin-content">Loading database records...</div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        async function loadAdminData() {
+            const container = document.getElementById('admin-content');
+            try {
+                // Fetch all pins using your existing endpoint
+                const res = await fetch(`${API_BASE}/pins`);
+                const pins = await res.json();
+                
+                if (pins.length === 0) {
+                    container.innerHTML = "<p>No pins found in the database.</p>";
+                    return;
+                }
+
+                container.innerHTML = '';
+                
+                for (const pin of pins) {
+                    // Fetch images for each pin using your existing endpoint
+                    const imgRes = await fetch(`${API_BASE}/pins/${pin.id}`);
+                    const images = await imgRes.json();
+
+                    const card = document.createElement('div');
+                    card.className = 'pin-card';
+                    card.id = `pin-${pin.id}`;
+                    
+                    let imagesHtml = images.map(img => `
+                        <div class="image-item" id="img-${img.id}">
+                            <img src="${img.file_path}" alt="Sunset">
+                            <button class="delete-img-btn" onclick="deleteImage(${img.id})">&times;</button>
+                        </div>
+                    `).join('');
+
+                    card.innerHTML = `
+                        <div class="pin-header">
+                            <div>
+                                <strong>Pin #${pin.id}</strong><br>
+                                <small>Lat: ${parseFloat(pin.lat).toFixed(4)}, Lon: ${parseFloat(pin.lon).toFixed(4)}</small>
+                            </div>
+                            <button class="danger-btn" onclick="deletePin(${pin.id})">Delete Entire Pin</button>
+                        </div>
+                        <div class="image-grid">
+                            ${imagesHtml || '<p style="color:#888;">No images remaining in this pin.</p>'}
+                        </div>
+                    `;
+                    container.appendChild(card);
+                }
+            } catch (err) {
+                container.innerHTML = `<p style="color:#ff3a3a;">Error loading data: ${err.message}</p>`;
+            }
+        }
+
+        async function deleteImage(imageId) {
+            if (!confirm("Delete this image permanently?")) return;
+            const res = await fetch(`${API_BASE}/admin/image/${imageId}`, { method: 'DELETE' });
+            if (res.ok) document.getElementById(`img-${imageId}`).remove();
+            else alert("Failed to delete image.");
+        }
+
+        async function deletePin(pinId) {
+            if (!confirm("Delete this pin AND all its images permanently?")) return;
+            const res = await fetch(`${API_BASE}/admin/pin/${pinId}`, { method: 'DELETE' });
+            if (res.ok) document.getElementById(`pin-${pinId}`).remove();
+            else alert("Failed to delete pin.");
+        }
+
+        window.onload = loadAdminData;
+    </script>
+</body>
+</html>

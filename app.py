@@ -2,11 +2,12 @@ import os
 import math
 import heapq
 from datetime import datetime
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, Response, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from db import get_db_connection
 import cloudinary
 import cloudinary.uploader
+from functools import wraps
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -33,6 +34,50 @@ def haversine(lat1, lon1, lat2, lon2):
     a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
+
+# --- ADMIN AUTHENTICATION SECURITY ---
+def check_auth(username, password):
+    """Check if a username / password combination is valid."""
+    correct_username = os.getenv('ADMIN_USERNAME')
+    correct_password = os.getenv('ADMIN_PASSWORD')
+    return username == correct_username and password == correct_password
+
+def authenticate():
+    """Sends a 401 response that enables basic auth"""
+    return Response(
+    'Access Denied. Please log in with admin credentials.', 401,
+    {'WWW-Authenticate': 'Basic realm="Admin Dashboard"'})
+
+def requires_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not auth or not check_auth(auth.username, auth.password):
+            return authenticate()
+        return f(*args, **kwargs)
+    return decorated
+
+# Helper: Extract Cloudinary Public ID from URL
+def get_cloudinary_public_id(url):
+    try:
+        # Example URL: https://res.cloudinary.com/.../upload/v1234567/catchmesunsets/abc.jpg
+        parts = url.split('/upload/')
+        if len(parts) == 2:
+            path_parts = parts[1].split('/')
+            # Remove the version tag (e.g., 'v1234567') if it exists
+            if path_parts[0].startswith('v') and path_parts[0][1:].isdigit():
+                path_parts = path_parts[1:]
+            
+            # Remove the file extension (e.g., '.jpg')
+            file_name_with_ext = path_parts[-1]
+            file_name = file_name_with_ext.rsplit('.', 1)[0]
+            path_parts[-1] = file_name
+            
+            # Rejoin to get 'catchmesunsets/abc'
+            return '/'.join(path_parts)
+    except Exception as e:
+        print(f"Error parsing Cloudinary URL: {e}")
+    return None
 
 # --- Frontend Serving Routes ---
 @app.route('/', methods=['GET'])
@@ -178,6 +223,79 @@ def get_gallery(pin_id):
                 
         return jsonify(images), 200
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+# --- ADMIN & MODERATION ROUTES ---
+
+@app.route('/admin')
+@requires_auth
+def admin_page():
+    return render_template('admin.html')
+
+@app.route('/admin/image/<int:image_id>', methods=['DELETE'])
+@requires_auth
+def delete_image(image_id):
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    cursor = conn.cursor(dictionary=True)
+    try:
+        # 1. Find the image URL in the database
+        cursor.execute("SELECT file_path FROM images WHERE id = %s", (image_id,))
+        img = cursor.fetchone()
+        
+        if img:
+            # 2. Delete the physical file from Cloudinary
+            public_id = get_cloudinary_public_id(img['file_path'])
+            if public_id:
+                cloudinary.uploader.destroy(public_id)
+            
+            # 3. Delete the record from your database
+            cursor.execute("DELETE FROM images WHERE id = %s", (image_id,))
+            conn.commit()
+            return jsonify({"status": "success"}), 200
+        else:
+            return jsonify({"error": "Image not found"}), 404
+            
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/admin/pin/<int:pin_id>', methods=['DELETE'])
+@requires_auth
+def delete_pin(pin_id):
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+        
+    cursor = conn.cursor(dictionary=True)
+    try:
+        # 1. Find ALL images associated with this pin
+        cursor.execute("SELECT file_path FROM images WHERE pin_id = %s", (pin_id,))
+        images = cursor.fetchall()
+        
+        # 2. Delete all physical files from Cloudinary
+        for img in images:
+            public_id = get_cloudinary_public_id(img['file_path'])
+            if public_id:
+                cloudinary.uploader.destroy(public_id)
+                
+        # 3. Delete the pin from your database 
+        # (Because of ON DELETE CASCADE in your db.py, this automatically deletes the image rows too!)
+        cursor.execute("DELETE FROM pins WHERE id = %s", (pin_id,))
+        conn.commit()
+        
+        return jsonify({"status": "success"}), 200
+        
+    except Exception as e:
+        conn.rollback()
         return jsonify({'error': str(e)}), 500
     finally:
         cursor.close()

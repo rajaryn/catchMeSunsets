@@ -15,20 +15,17 @@ html {
 }
 
 /* Floating Upload Button (Glassmorphism Style) */
-/* Floating Upload Button (Glassmorphism Style) */
 .upload-btn {
     position: absolute;
     bottom: 30px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 1000;
-
     background-color: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     color: #333;
     border: 1px solid rgba(255, 255, 255, 0.3);
-
     padding: 15px 30px;
     border-radius: 30px;
     font-size: 16px;
@@ -36,25 +33,31 @@ html {
     cursor: pointer;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
-
-    /* Forces single-line and prevents vertical stacking */
     white-space: nowrap;
     max-width: 90vw;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-/* Hover & Active States: Signature Orange */
 .upload-btn:hover,
-.upload-btn:active {
-    background-color: #ff5e3a;
-    color: white;
-    transform: translateX(-50%) scale(1.05);
-    box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4);
-    border-color: transparent;
+.upload-btn:active,
+.upload-btn:focus {
+    background-color: #ff5e3a !important;
+    color: white !important;
+    transform: translateX(-50%) scale(1.05) !important;
+    box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4) !important;
+    border-color: transparent !important;
 }
 
-/* --- Tiny Screen Adjustments --- */
+.upload-btn:disabled {
+    background-color: rgba(200, 200, 200, 0.5) !important;
+    color: #888 !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    transform: translateX(-50%) scale(1) !important;
+}
+
 @media (max-width: 400px) {
     .upload-btn {
         padding: 12px 20px;
@@ -62,34 +65,24 @@ html {
     }
 }
 
-#file-input {
-    display: none;
-}
-
-/* --- Toast Notification --- */
 .toast {
     position: absolute;
     top: -100px;
     opacity: 0;
     left: 50%;
     transform: translateX(-50%);
-
-    /* Exact match to .top-pill frost */
     background: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     border: 1px solid rgba(255, 255, 255, 0.3);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-
     color: #333;
-    /* Dark text to match the pill */
     padding: 12px 24px;
     border-radius: 30px;
     font-weight: bold;
     font-size: 14px;
     z-index: 3000;
     transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-
     width: max-content;
     max-width: 85vw;
     text-align: center;
@@ -101,7 +94,6 @@ html {
     opacity: 1;
 }
 
-/* --- Premium Radar Pin --- */
 .sunset-wrapper {
     background: transparent;
     border: none;
@@ -111,19 +103,15 @@ html {
     width: 14px;
     height: 14px;
     background-color: #ff5e3a;
-    /* Signature Orange */
     border-radius: 50%;
     border: 3px solid #ffffff;
-    /* Crisp white border for high contrast */
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     position: relative;
-    /* Centers the pulse behind the dot */
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-/* The expanding radar ring */
 .premium-pin::after {
     content: '';
     position: absolute;
@@ -144,13 +132,10 @@ html {
 
     100% {
         transform: scale(3.5);
-        /* Expands to 3.5x its size */
         opacity: 0;
-        /* Fades out as it expands */
     }
 }
 
-/* --- Aesthetic Pinterest Gallery with Frosted Glass --- */
 #gallery-modal {
     display: flex;
     opacity: 0;
@@ -168,14 +153,9 @@ html {
     overflow-y: auto;
     padding: 80px 20px 40px 20px;
     box-sizing: border-box;
-
-    /* ✅ NEW FROST EFFECT (LIGHT) */
-    /* Almost fully transparent white base */
     background: rgba(255, 255, 255, 0.1);
-    /* Heavy blur to diffuse map colors */
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    /* Subtle highlight border at the very top */
     border-top: 1px solid rgba(255, 255, 255, 0.3);
 }
 
@@ -204,11 +184,9 @@ html {
     display: inline-block;
     width: 100%;
     margin-bottom: 15px;
-    /* ✅ LIGHTER BASE for light frost background */
     background: rgba(255, 255, 255, 0.6);
     border-radius: 12px;
     overflow: hidden;
-    /* ✅ SOFT SHADOW instead of hard dark one */
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
     position: relative;
     cursor: pointer;
@@ -217,14 +195,20 @@ html {
     animation: fadeUp 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
 }
 
-/* Update text inside card for readability on lighter background */
 .image-date {
-    /* ... existing position/rounding/size rules ... */
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
     background: rgba(255, 255, 255, 0.7);
-    /* Light background for date tag */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     color: #333;
-    /* Dark text for date */
-    /* ... keep other styles ... */
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    pointer-events: none;
 }
 
 @keyframes fadeUp {
@@ -247,23 +231,6 @@ html {
     height: 100%;
 }
 
-.image-date {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    background: rgba(10, 10, 10, 0.5);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    color: #fff;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    letter-spacing: 0.5px;
-    pointer-events: none;
-}
-
-/* --- FULLSCREEN LIGHTBOX CAROUSEL --- */
 .lightbox {
     visibility: hidden;
     opacity: 0;
@@ -278,15 +245,11 @@ html {
     justify-content: center;
     flex-direction: column;
     transition: opacity 0.3s ease, visibility 0.3s ease;
-
-    /* Almost no base color, relies purely on the map below */
     background: rgba(255, 255, 255, 0.02);
-    /* Extreme blur isolates the image completely */
     backdrop-filter: blur(40px) saturate(1.8);
     -webkit-backdrop-filter: blur(40px) saturate(1.8);
 }
 
-/* Update Lightbox date text color for light background */
 .lightbox-date {
     margin-top: 20px;
     color: #ffffff;
@@ -309,15 +272,7 @@ html {
     border-radius: 8px;
     transform: scale(0.95);
     transition: transform 0.3s ease;
-
-    /* ✅ THE FIXES: Intensified the opacity and spread of the orange glow */
-    box-shadow:
-        0 10px 50px rgba(255, 94, 58, 0.5),
-        /* Deeper core shadow */
-        0 0 100px rgba(255, 94, 58, 0.4),
-        /* Wider, brighter mid-glow */
-        0 0 20px rgba(255, 94, 58, 0.6);
-    /* Tight, intense inner rim */
+    box-shadow: 0 10px 50px rgba(255, 94, 58, 0.5), 0 0 100px rgba(255, 94, 58, 0.4), 0 0 20px rgba(255, 94, 58, 0.6);
 }
 
 .lightbox.show #lightbox-img {
@@ -328,15 +283,12 @@ html {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-
-    /* ✅ THE FIX: Matches the close buttons exactly */
     background: rgba(255, 255, 255, 0.3);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     color: #333;
     border: 1px solid rgba(255, 255, 255, 0.4);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-
     width: 50px;
     height: 50px;
     font-size: 20px;
@@ -349,7 +301,6 @@ html {
 .nav-btn:hover {
     background: rgba(255, 94, 58, 0.9);
     color: white;
-    /* ✅ Flips to white on hover */
     border-color: transparent;
     transform: translateY(-50%) scale(1.1);
     box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4);
@@ -363,28 +314,17 @@ html {
     right: 20px;
 }
 
-.lightbox-date {
-    margin-top: 15px;
-    color: #ddd;
-    font-size: 1rem;
-    font-weight: 500;
-}
-
-/* --- UNIFIED CLOSE BUTTON --- */
 .close-btn,
 .lightbox-close {
     position: absolute;
     top: 25px;
     right: 25px;
-
-    /* ✅ THE FIX: Thicker white frost, dark text, subtle border and shadow */
     background: rgba(255, 255, 255, 0.3);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     color: #333;
     border: 1px solid rgba(255, 255, 255, 0.4);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-
     width: 45px;
     height: 45px;
     border-radius: 50%;
@@ -405,14 +345,11 @@ html {
 .lightbox-close:hover {
     background: rgba(255, 94, 58, 0.9);
     color: white;
-    /* ✅ Flips back to white text on orange background */
     border-color: transparent;
     transform: scale(1.1);
     box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4);
 }
 
-
-/* --- Orbiting Ember Loader --- */
 .fill-loader {
     position: absolute;
     top: 50%;
@@ -453,27 +390,22 @@ html {
     }
 }
 
-/* --- Floating Top Pill (Mobile First) --- */
 .top-pill {
     position: absolute;
     top: max(20px, env(safe-area-inset-top));
     left: 50%;
     transform: translateX(-50%);
     z-index: 1000;
-
     display: flex;
     align-items: center;
     justify-content: space-between;
-
     background: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     border: 1px solid rgba(255, 255, 255, 0.3);
-
     padding: 10px 15px 10px 20px;
     border-radius: 30px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-
     width: 85%;
     max-width: 400px;
     transition: all 0.3s ease;
@@ -504,25 +436,27 @@ html {
     transition: all 0.3s ease;
 }
 
-/* THE HOVER MAGIC FOR THE PILL */
-.top-pill:hover {
-    background-color: #ff5e3a;
-    border-color: transparent;
-    box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4);
+.top-pill:hover,
+.top-pill:active {
+    background-color: #ff5e3a !important;
+    border-color: transparent !important;
+    box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4) !important;
     transform: translateX(-50%) scale(1.02);
 }
 
 .top-pill:hover .brand-name,
-.top-pill:hover .brand-name span {
-    color: white;
+.top-pill:hover .brand-name span,
+.top-pill:active .brand-name,
+.top-pill:active .brand-name span {
+    color: white !important;
 }
 
-.top-pill:hover .about-btn {
-    background: white;
-    color: #ff5e3a;
+.top-pill:hover .about-btn,
+.top-pill:active .about-btn {
+    background: white !important;
+    color: #ff5e3a !important;
 }
 
-/* --- Bottom Sheet Drawer (About Page) --- */
 .drawer-overlay {
     position: fixed;
     top: 0;
@@ -546,24 +480,19 @@ html {
     bottom: 0;
     left: 0;
     width: 100%;
-
     background: rgba(10, 10, 10, 0.55);
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-
     z-index: 3500;
     border-top-left-radius: 30px;
     border-top-right-radius: 30px;
     padding: 20px 30px 50px 30px;
     box-sizing: border-box;
     color: white;
-
     transform: translateY(100%);
     transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
-
-    /* ✅ THE FIX: Put the height limit and scroll on the container itself */
     max-height: 85vh;
     overflow-y: auto;
 }
@@ -578,6 +507,7 @@ html {
     background: rgba(255, 255, 255, 0.3);
     border-radius: 5px;
     margin: 0 auto 20px auto;
+    cursor: pointer;
 }
 
 .about-drawer h2 {
@@ -599,16 +529,6 @@ html {
     text-align: center;
 }
 
-/* Hide Zoom Controls & Lightbox UI --- */
-@media (max-width: 768px) {
-
-    .leaflet-control-zoom,
-    .nav-btn,
-    .lightbox-close {
-        display: none !important;
-    }
-}
-
 .about-content p {
     line-height: 1.6;
     margin-bottom: 1rem;
@@ -617,19 +537,39 @@ html {
 
 .about-content em {
     color: #ff5e3a;
-    /* Brings a touch of your sunset orange to the opening line */
 }
 
-@media (max-width: 600px) {
-    .about-content p {
-        font-size: 0.9rem;
-        line-height: 1.4;
-        margin-bottom: 0.8rem;
-    }
+/* --- Upload Action Sheet Buttons --- */
+.action-btn {
+    width: 100%;
 
-    .about-drawer h2 {
-        font-size: 1.4rem;
-        margin-bottom: 0.8rem;
-        /* Removed the bad overflow and height lines from here */
-    }
+    /* 1. Exact Frosted Glass Finish of the Top Pill */
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    color: white;
+    /* Keeps text crisp against the dark drawer */
+
+    /* 2. Exact Shape & Typography of the Main Upload Button */
+    padding: 15px 30px;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 15px;
+
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+/* Hover, Active & Focus States: Signature Orange */
+.action-btn:hover,
+.action-btn:active,
+.action-btn:focus {
+    background-color: #ff5e3a !important;
+    color: white !important;
+    border-color: transparent !important;
+    box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4) !important;
+    transform: scale(1.02) !important;
 }

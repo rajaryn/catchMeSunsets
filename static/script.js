@@ -8,29 +8,36 @@ let currentUserLon = null;
 let currentGalleryImages = [];
 let currentImageIndex = 0;
 
+// DOM Elements
 const lightboxModal = document.getElementById("lightbox-modal");
 const lightboxImg = document.getElementById("lightbox-img");
 const lightboxDate = document.getElementById("lightbox-date");
 
 const uploadBtn = document.getElementById("upload-btn");
-const fileInput = document.getElementById("file-input");
+const fileInputGallery = document.getElementById("file-input-gallery");
+const fileInputCamera = document.getElementById("file-input-camera");
+const uploadSheet = document.getElementById("upload-sheet");
+const btnCamera = document.getElementById("btn-camera");
+const btnGallery = document.getElementById("btn-gallery");
+const uploadHandle = document.getElementById("upload-handle");
+
 const galleryModal = document.getElementById("gallery-modal");
 const galleryContent = document.getElementById("gallery-content");
 const closeBtn = document.getElementById("close-btn");
 const galleryLoading = document.getElementById("gallery-loading");
 const toast = document.getElementById("toast");
+const aboutBtn = document.getElementById("about-btn");
+const aboutDrawer = document.getElementById("about-drawer");
+const drawerOverlay = document.getElementById("drawer-overlay");
 
 // --- Toast Logic ---
 function showToast(message, isError = false) {
   toast.innerText = message;
-  
-  // Use signature orange for errors, dark gray for normal messages
   toast.style.color = isError ? "#ff5e3a" : "#333";
-    
   toast.classList.add("show");
-  
+
   setTimeout(() => {
-      toast.classList.remove("show");
+    toast.classList.remove("show");
   }, 3000);
 }
 
@@ -38,8 +45,8 @@ function showToast(message, isError = false) {
 const sunsetIcon = L.divIcon({
   className: "sunset-wrapper",
   html: '<div class="premium-pin"></div>',
-  iconSize: [20, 20],   // The size of the dot + white border
-  iconAnchor: [10, 10], // Dead center (half of 20)
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
 });
 
 // --- 1. INITIAL LOAD ---
@@ -79,13 +86,16 @@ async function fetchAllPins() {
   }
 }
 
-// --- 2. UPLOAD CLICK ---
+// --- 2. MAIN UPLOAD BUTTON CLICK ---
 uploadBtn.addEventListener("click", () => {
+  // If we already have location, just show the choice drawer
   if (currentUserLat && currentUserLon) {
-    fileInput.click();
+    uploadSheet.classList.add("show");
+    drawerOverlay.classList.add("show");
     return;
   }
 
+  // Otherwise, get location first
   if (navigator.geolocation) {
     uploadBtn.innerText = "Locating...";
     uploadBtn.disabled = true;
@@ -97,7 +107,10 @@ uploadBtn.addEventListener("click", () => {
         map.setView([currentUserLat, currentUserLon], 15);
         uploadBtn.innerText = "Select Photo";
         uploadBtn.disabled = false;
-        fileInput.click();
+
+        // Open the choice drawer
+        uploadSheet.classList.add("show");
+        drawerOverlay.classList.add("show");
       },
       (error) => {
         console.error("Geolocation error:", error);
@@ -107,7 +120,7 @@ uploadBtn.addEventListener("click", () => {
       },
       {
         enableHighAccuracy: true,
-        timeout: 60000,
+        timeout: 30000,
         maximumAge: 0,
       },
     );
@@ -116,17 +129,52 @@ uploadBtn.addEventListener("click", () => {
   }
 });
 
-// --- 3. FILE UPLOAD ---
-fileInput.addEventListener("change", async (event) => {
+// --- 3. ACTION SHEET ROUTING ---
+btnCamera.addEventListener("click", () => fileInputCamera.click());
+btnGallery.addEventListener("click", () => fileInputGallery.click());
+
+// Close action sheet on handle click
+uploadHandle.addEventListener("click", () => {
+  uploadSheet.classList.remove("show");
+  drawerOverlay.classList.remove("show");
+});
+
+// --- LAZY LOAD HEIC CONVERTER LOGIC ---
+let heicLoaded = false;
+function loadHeicLibrary() {
+  return new Promise((resolve, reject) => {
+    if (heicLoaded) return resolve();
+    const script = document.createElement("script");
+    script.src =
+      "https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
+    script.onload = () => {
+      heicLoaded = true;
+      resolve();
+    };
+    script.onerror = () => reject(new Error("Failed to load HEIC converter"));
+    document.head.appendChild(script);
+  });
+}
+
+// --- 4. MASTER FILE HANDLING ---
+const handleFileSelection = async (event) => {
   let file = event.target.files[0];
   if (!file) return;
+
+  // Immediately hide the drawer
+  uploadSheet.classList.remove("show");
+  drawerOverlay.classList.remove("show");
 
   const originalText = uploadBtn.innerText;
   uploadBtn.innerText = "⏳ Processing...";
   uploadBtn.disabled = true;
 
+  // Lazy load HEIC processing if required
   if (file.name.toLowerCase().endsWith(".heic") || file.type === "image/heic") {
     try {
+      showToast("Loading Apple Image Engine...");
+      await loadHeicLibrary();
+
       showToast("Converting iPhone photo...");
       const blob = await heic2any({
         blob: file,
@@ -140,12 +188,13 @@ fileInput.addEventListener("change", async (event) => {
       showToast("Could not process HEIC file", true);
       uploadBtn.innerText = originalText;
       uploadBtn.disabled = false;
+      fileInputCamera.value = "";
+      fileInputGallery.value = "";
       return;
     }
   }
 
   uploadBtn.innerText = "Uploading...";
-
   const formData = new FormData();
   formData.append("image", file);
   formData.append("lat", currentUserLat);
@@ -166,43 +215,36 @@ fileInput.addEventListener("change", async (event) => {
   } catch (error) {
     showToast("Network error while uploading.", true);
   } finally {
-    uploadBtn.innerText = "📸 Upload Another";
+    uploadBtn.innerText = "Upload Another";
     uploadBtn.disabled = false;
-    fileInput.value = "";
+    // Reset inputs
+    fileInputCamera.value = "";
+    fileInputGallery.value = "";
   }
-});
+};
 
-// --- 4. GALLERY VIEW ---
+fileInputGallery.addEventListener("change", handleFileSelection);
+fileInputCamera.addEventListener("change", handleFileSelection);
+
+// --- 5. GALLERY VIEW LOGIC ---
 async function openGallery(pinId) {
-  // 1. Smoothly fade in the modal overlay
   galleryModal.classList.add("show-modal");
   galleryContent.innerHTML = "";
-
-  // 2. Reset and show the animated Orbiting Ember loader
   galleryLoading.style.display = "flex";
-  galleryLoading.className = "fill-loader"; // Resets class, keeps it centered
-  galleryLoading.classList.remove("fade-out"); 
-  
-  // Inject the pure CSS Orbiting Ember
-  galleryLoading.innerHTML = `
-    <div class="orbiting-ember"></div>
-  `;
+  galleryLoading.className = "fill-loader";
+  galleryLoading.classList.remove("fade-out");
+  galleryLoading.innerHTML = `<div class="orbiting-ember"></div>`;
 
   try {
     const response = await fetch(`${API_BASE}/pins/${pinId}`);
     if (!response.ok) throw new Error("Failed to fetch gallery");
 
     const images = await response.json();
-
-    // 3. Start the slow fade-out of the loader
     galleryLoading.classList.add("fade-out");
-    
-    // Completely hide it from the layout only AFTER the 0.8s CSS fade finishes
     setTimeout(() => {
-        galleryLoading.style.display = "none";
-    }, 800); 
+      galleryLoading.style.display = "none";
+    }, 800);
 
-    // Handle empty state if no images exist
     if (images.length === 0) {
       galleryContent.innerHTML =
         '<p style="color:white; text-align:center; width:100%; margin-top: 60px;">No sunsets caught here yet.</p>';
@@ -211,12 +253,9 @@ async function openGallery(pinId) {
 
     currentGalleryImages = images;
 
-    // 4. Render the images
     images.forEach((img, index) => {
       const card = document.createElement("div");
       card.className = "image-card";
-
-      // Staggered entrance animation for a cascading effect
       card.style.animationDelay = `${index * 0.1}s`;
       card.onclick = () => openLightbox(index);
 
@@ -228,12 +267,10 @@ async function openGallery(pinId) {
       const dateElement = document.createElement("div");
       dateElement.className = "image-date";
 
-      // UTC to Local Timezone conversion
       const safeDateString = img.uploaded_at.replace(" ", "T");
       const utcString = safeDateString.endsWith("Z")
         ? safeDateString
         : safeDateString + "Z";
-
       const localDate = new Date(utcString).toLocaleString(undefined, {
         month: "short",
         day: "numeric",
@@ -242,21 +279,19 @@ async function openGallery(pinId) {
       });
 
       dateElement.innerText = localDate;
-
       card.appendChild(imgElement);
       card.appendChild(dateElement);
       galleryContent.appendChild(card);
     });
   } catch (error) {
     console.error("Gallery Error:", error);
-    // Ensure the loader is visible if there's an error so the user sees the message
-    galleryLoading.classList.remove("fade-out"); 
+    galleryLoading.classList.remove("fade-out");
     galleryLoading.style.display = "flex";
     galleryLoading.innerHTML = `<p style="color:#ff5e3a; text-align:center;">Failed to catch the sun.<br>Check your connection.</p>`;
   }
 }
 
-// --- LIGHTBOX CAROUSEL LOGIC ---
+// --- 6. LIGHTBOX & SWIPE LOGIC ---
 function openLightbox(index) {
   currentImageIndex = index;
   updateLightboxView();
@@ -302,69 +337,59 @@ lightboxModal.addEventListener("click", (e) => {
   if (e.target === lightboxModal) closeLightbox();
 });
 
-// --- CLOSE GALLERY LOGIC ---
-closeBtn.addEventListener("click", () => {
-  // CHANGED: Remove class instead of changing display
-  galleryModal.classList.remove("show-modal");
-
-  // Clear content after animation finishes
-  setTimeout(() => {
-    galleryContent.innerHTML = "";
-  }, 400);
-});
-
-// --- ABOUT DRAWER LOGIC ---
-const aboutBtn = document.getElementById("about-btn");
-const aboutDrawer = document.getElementById("about-drawer");
-const drawerOverlay = document.getElementById("drawer-overlay");
-
-// Open the drawer
-aboutBtn.addEventListener("click", () => {
-    aboutDrawer.classList.add("show");
-    drawerOverlay.classList.add("show");
-});
-
-// Close the drawer if they click the dark background overlay
-drawerOverlay.addEventListener("click", () => {
-    aboutDrawer.classList.remove("show");
-    drawerOverlay.classList.remove("show");
-});
-
-// Also close it if they swipe down on the drawer handle (simulated with a click for now)
-document.querySelector(".drawer-handle").addEventListener("click", () => {
-    aboutDrawer.classList.remove("show");
-    drawerOverlay.classList.remove("show");
-});
-
-// --- MOBILE SWIPE LOGIC FOR LIGHTBOX ---
 let touchStartX = 0;
 let touchEndX = 0;
 
-// Record where the finger first touches the screen
-lightboxModal.addEventListener('touchstart', (e) => {
+lightboxModal.addEventListener(
+  "touchstart",
+  (e) => {
     touchStartX = e.changedTouches[0].screenX;
-}, false);
+  },
+  false,
+);
 
-// Record where the finger lifts off and calculate the swipe
-lightboxModal.addEventListener('touchend', (e) => {
+lightboxModal.addEventListener(
+  "touchend",
+  (e) => {
     touchEndX = e.changedTouches[0].screenX;
     handleSwipe();
-}, false);
+  },
+  false,
+);
 
 function handleSwipe() {
   const swipeThreshold = 40;
-  // Calculate the total distance moved
   const swipeDistance = touchStartX - touchEndX;
-
-  console.log(`Start X: ${touchStartX}, End X: ${touchEndX}`);
-  console.log(`Distance: ${swipeDistance}px`);
 
   if (swipeDistance > swipeThreshold) {
     nextImage();
   } else if (swipeDistance < -swipeThreshold) {
     prevImage();
-  } else {
   }
 }
+
+closeBtn.addEventListener("click", () => {
+  galleryModal.classList.remove("show-modal");
+  setTimeout(() => {
+    galleryContent.innerHTML = "";
+  }, 400);
+});
+
+// --- 7. ABOUT DRAWER LOGIC ---
+aboutBtn.addEventListener("click", () => {
+  aboutDrawer.classList.add("show");
+  drawerOverlay.classList.add("show");
+});
+
+drawerOverlay.addEventListener("click", () => {
+  aboutDrawer.classList.remove("show");
+  uploadSheet.classList.remove("show");
+  drawerOverlay.classList.remove("show");
+});
+
+document.querySelector(".drawer-handle").addEventListener("click", () => {
+  aboutDrawer.classList.remove("show");
+  drawerOverlay.classList.remove("show");
+});
 
 window.onload = initApp;

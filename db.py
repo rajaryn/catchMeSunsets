@@ -12,7 +12,7 @@ SERVER_CONFIG = {
     'port': int(os.getenv('DB_PORT', 4000)), 
     'user': os.getenv('DB_USER'),
     'password': os.getenv('DB_PASSWORD'),
-    'ssl_ca': certifi.where(),     # 👈 THE FIX: Explicitly provides the trusted certificates
+    'ssl_ca': certifi.where(),     
     'ssl_verify_cert': True,
     'ssl_verify_identity': True,
     'autocommit': True
