@@ -599,9 +599,12 @@ html {
     text-align: center;
 }
 
-/* --- Hide Zoom Controls on Mobile --- */
+/* Hide Zoom Controls & Lightbox UI --- */
 @media (max-width: 768px) {
-    .leaflet-control-zoom {
+
+    .leaflet-control-zoom,
+    .nav-btn,
+    .lightbox-close {
         display: none !important;
     }
 }

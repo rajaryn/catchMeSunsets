@@ -95,7 +95,7 @@ uploadBtn.addEventListener("click", () => {
         currentUserLat = position.coords.latitude;
         currentUserLon = position.coords.longitude;
         map.setView([currentUserLat, currentUserLon], 15);
-        uploadBtn.innerText = "📸 Select Photo";
+        uploadBtn.innerText = "Select Photo";
         uploadBtn.disabled = false;
         fileInput.click();
       },
@@ -335,5 +335,36 @@ document.querySelector(".drawer-handle").addEventListener("click", () => {
     aboutDrawer.classList.remove("show");
     drawerOverlay.classList.remove("show");
 });
+
+// --- MOBILE SWIPE LOGIC FOR LIGHTBOX ---
+let touchStartX = 0;
+let touchEndX = 0;
+
+// Record where the finger first touches the screen
+lightboxModal.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+}, false);
+
+// Record where the finger lifts off and calculate the swipe
+lightboxModal.addEventListener('touchend', (e) => {
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+}, false);
+
+function handleSwipe() {
+  const swipeThreshold = 40;
+  // Calculate the total distance moved
+  const swipeDistance = touchStartX - touchEndX;
+
+  console.log(`Start X: ${touchStartX}, End X: ${touchEndX}`);
+  console.log(`Distance: ${swipeDistance}px`);
+
+  if (swipeDistance > swipeThreshold) {
+    nextImage();
+  } else if (swipeDistance < -swipeThreshold) {
+    prevImage();
+  } else {
+  }
+}
 
 window.onload = initApp;
