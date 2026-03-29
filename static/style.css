@@ -691,9 +691,26 @@ body.dark-mode .theme-btn::after {
 /* --- DARK MODE & MOON STYLES --- */
 body.dark-mode {
     background-color: #0d1117;
+    color: #e0e0e0;
 }
 
-/* Target the new .brand-link in Dark Mode */
+/* Force standard text elements to flip to light grey in dark mode */
+body.dark-mode p,
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode label,
+body.dark-mode .about-content {
+    color: #e0e0e0;
+}
+
+/* Keep signature orange accents popping */
+body.dark-mode .about-drawer h2,
+body.dark-mode em {
+    color: #ff5e3a;
+}
+
+/* Target the brand link in Dark Mode */
 body.dark-mode .brand-link {
     color: #e6e6e6;
 }
