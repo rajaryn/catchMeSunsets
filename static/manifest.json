@@ -1,7 +1,7 @@
 {
-  "name": "catchMeSunsets",
-  "short_name": "Sunsets",
-  "description": "Drop a pin and share the sunset.",
+  "name": "Vesper",
+  "short_name": "Vesper",
+  "description": "Drop a pin and share the sky",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
