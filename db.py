@@ -38,9 +38,9 @@ def init_db():
         cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DB_NAME}")
         cursor.close()
         server_conn.close()
-        print(f"✅ Database '{DB_NAME}' is ready.")
+        print(f"Database '{DB_NAME}' is ready.")
     except Error as e:
-        print(f"❌ Error creating database: {e}")
+        print(f"Error creating database: {e}")
         return
 
     # Step 2: Create the tables inside the database
@@ -77,7 +77,7 @@ def init_db():
         print("✅ Tables 'pins' and 'images' are ready.")
         
     except Error as e:
-        print(f"❌ Error creating tables: {e}")
+        print(f"Error creating tables: {e}")
 
 def get_db_connection():
     """Returns a connection to the database for use in app endpoints."""
@@ -85,9 +85,8 @@ def get_db_connection():
         conn = mysql.connector.connect(**DB_CONFIG)
         return conn
     except Error as e:
-        print(f"❌ Error connecting to MySQL: {e}")
+        print(f"Error connecting to MySQL: {e}")
         return None
 
-# If you run `python db.py` in your terminal, it will execute the setup.
 if __name__ == '__main__':
     init_db()

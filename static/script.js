@@ -33,21 +33,12 @@ const drawerOverlay = document.getElementById("drawer-overlay");
 // --- Toast Logic ---
 function showToast(message, isError = false) {
   toast.innerText = message;
-  toast.style.color = isError ? "#ff5e3a" : "#333";
   toast.classList.add("show");
 
   setTimeout(() => {
     toast.classList.remove("show");
   }, 3000);
 }
-
-// --- Premium Map Marker ---
-const sunsetIcon = L.divIcon({
-  className: "sunset-wrapper",
-  html: '<div class="premium-pin"></div>',
-  iconSize: [20, 20],
-  iconAnchor: [10, 10],
-});
 
 // --- 1. INITIAL LOAD ---
 function initApp() {
@@ -61,10 +52,33 @@ function initApp() {
     minZoom: 2,
   });
 
+  // 1. YOUR ORIGINAL CLEAN MAP (Using Carto Light)
   L.tileLayer(
     "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    { attribution: "&copy; CARTO" },
+    {
+      attribution: '&copy; <a href="https://carto.com/">Carto</a>',
+      maxZoom: 20,
+    },
   ).addTo(map);
+
+  // 2. ENFORCING THE BORDERS (The GeoJSON Overlay)
+  fetch("/static/india.geojson")
+    .then((response) => {
+      if (!response.ok) throw new Error("Failed to fetch GeoJSON");
+      return response.json();
+    })
+    .then((data) => {
+      L.geoJSON(data, {
+        style: {
+          color: "#a3a3a3",
+          weight: 1,
+          opacity: 0.8,
+          fillOpacity: 0,
+        },
+        interactive: false,
+      }).addTo(map);
+    })
+    .catch((err) => console.log("Could not load border overlay: ", err));
 
   markersLayer = L.layerGroup().addTo(map);
   fetchAllPins();
@@ -76,8 +90,40 @@ async function fetchAllPins() {
     if (!response.ok) throw new Error("Failed to fetch pins");
     const pins = await response.json();
     markersLayer.clearLayers();
+
+    // Get today's local date formatted as YYYY-MM-DD
+    const today = new Date();
+    const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
     pins.forEach((pin) => {
-      const marker = L.marker([pin.lat, pin.lon], { icon: sunsetIcon });
+      let isToday = false;
+
+      // Check if this pin has an upload, and if the date matches today
+      if (pin.last_upload_at) {
+        // Convert the database timestamp into a safe local date (fixes iOS Safari bugs)
+        const safeDateStr =
+          pin.last_upload_at.replace(" ", "T") +
+          (pin.last_upload_at.endsWith("Z") ? "" : "Z");
+        const uploadDate = new Date(safeDateStr);
+
+        const uploadDateString = `${uploadDate.getFullYear()}-${String(uploadDate.getMonth() + 1).padStart(2, "0")}-${String(uploadDate.getDate()).padStart(2, "0")}`;
+
+        if (uploadDateString === todayString) {
+          isToday = true;
+        }
+      }
+
+      // If it's today, use 'today-pin', otherwise use the normal 'premium-pin'
+      const pinClass = isToday ? "today-pin" : "premium-pin";
+
+      const dynamicIcon = L.divIcon({
+        className: "sunset-wrapper",
+        html: `<div class="${pinClass}"></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+      });
+
+      const marker = L.marker([pin.lat, pin.lon], { icon: dynamicIcon });
       marker.on("click", () => openGallery(pin.id));
       markersLayer.addLayer(marker);
     });
@@ -88,12 +134,14 @@ async function fetchAllPins() {
 
 // --- 2. MAIN UPLOAD BUTTON CLICK ---
 uploadBtn.addEventListener("click", () => {
+  // If we ALREADY have their location, clicking the button opens the drawer instantly
   if (currentUserLat && currentUserLon) {
     uploadSheet.classList.add("show");
     drawerOverlay.classList.add("show");
     return;
   }
 
+  // If we DON'T have their location, we find them first
   if (navigator.geolocation) {
     uploadBtn.innerText = "Locating...";
     uploadBtn.disabled = true;
@@ -102,22 +150,27 @@ uploadBtn.addEventListener("click", () => {
       (position) => {
         currentUserLat = position.coords.latitude;
         currentUserLon = position.coords.longitude;
+        
+        // 1. Pan the map beautifully to their location
         map.setView([currentUserLat, currentUserLon], 15);
-        uploadBtn.innerText = "Select Photo";
+        
+        // 2. Pop the quiet toast
+        showToast("Live at your location");
+        
+        // 3. Change the button to be ready for the actual upload,
+        // but DO NOT open the drawer yet!
+        uploadBtn.innerText = "Select Photo"; 
         uploadBtn.disabled = false;
-
-        uploadSheet.classList.add("show");
-        drawerOverlay.classList.add("show");
       },
       (error) => {
         console.error("Geolocation error:", error);
-        showToast("Location is required to upload a sunset.", true);
+        showToast("Location is required.", true);
         uploadBtn.innerText = "Share Location to Upload";
         uploadBtn.disabled = false;
       },
       {
         enableHighAccuracy: true,
-        timeout: 30000,
+        timeout: 60000,
         maximumAge: 0,
       },
     );
@@ -161,15 +214,14 @@ const handleFileSelection = async (event) => {
   drawerOverlay.classList.remove("show");
 
   const originalText = uploadBtn.innerText;
-  uploadBtn.innerText = "⏳ Processing...";
+  uploadBtn.innerText = "Processing...";
   uploadBtn.disabled = true;
 
   if (file.name.toLowerCase().endsWith(".heic") || file.type === "image/heic") {
     try {
-      showToast("Loading Apple Image Engine...");
+    s
       await loadHeicLibrary();
 
-      showToast("Converting iPhone photo...");
       const blob = await heic2any({
         blob: file,
         toType: "image/jpeg",
@@ -226,7 +278,6 @@ fileInputGallery.addEventListener("change", handleFileSelection);
 fileInputCamera.addEventListener("change", handleFileSelection);
 
 // --- 5. GALLERY VIEW LOGIC ---
-// --- 5. GALLERY VIEW LOGIC ---
 async function openGallery(pinId) {
   galleryModal.classList.add("show-modal");
   galleryContent.innerHTML = "";
@@ -236,7 +287,6 @@ async function openGallery(pinId) {
   galleryLoading.innerHTML = `<div class="orbiting-ember"></div>`;
 
   try {
-    // ✅ THE FIX: We removed the ?type= filter. Now it fetches ALL photos for this pin!
     const response = await fetch(`${API_BASE}/pins/${pinId}`);
     if (!response.ok) throw new Error("Failed to fetch gallery");
 
@@ -247,7 +297,6 @@ async function openGallery(pinId) {
     }, 800);
 
     if (images.length === 0) {
-      // ✅ THE FIX: A universal, poetic message
       galleryContent.innerHTML = `<p style="color:white; text-align:center; width:100%; margin-top: 60px;">No skies caught here yet.</p>`;
       return;
     }
@@ -260,7 +309,6 @@ async function openGallery(pinId) {
       card.style.animationDelay = `${index * 0.1}s`;
       card.onclick = () => openLightbox(index);
 
-      // ✅ THE FIX: Generate the Sun/Moon badge based on the database
       const typeBadge = document.createElement("div");
       typeBadge.className = "type-badge";
       typeBadge.innerText = img.capture_type === "moon" ? "🌙" : "☀️";
@@ -285,10 +333,9 @@ async function openGallery(pinId) {
       });
 
       dateElement.innerText = localDate;
-      
-      // Append everything to the card
+
       card.appendChild(imgElement);
-      card.appendChild(typeBadge); // Add the badge!
+      card.appendChild(typeBadge);
       card.appendChild(dateElement);
       galleryContent.appendChild(card);
     });
@@ -314,7 +361,6 @@ function closeLightbox() {
 function updateLightboxView(direction = "none") {
   const img = currentGalleryImages[currentImageIndex];
 
-  // 1. Fade out and slide the current image out of the way
   lightboxImg.style.opacity = "0";
   if (direction === "next")
     lightboxImg.style.transform = "translateX(-30px) scale(0.95)";
@@ -323,7 +369,6 @@ function updateLightboxView(direction = "none") {
   else lightboxImg.style.transform = "scale(0.95)";
 
   setTimeout(() => {
-    // 2. Swap the photo and date while it is faded out
     lightboxImg.src = img.file_path;
 
     const safeDateString = img.uploaded_at.replace(" ", "T");
@@ -338,25 +383,24 @@ function updateLightboxView(direction = "none") {
     });
     lightboxDate.innerText = localDate;
 
-    // 3. Glide the new photo into the center once it finishes loading
     lightboxImg.onload = () => {
       lightboxImg.style.opacity = "1";
       lightboxImg.style.transform = "translateX(0) scale(1)";
     };
-  }, 200); // 200ms gives the fade-out time to finish
+  }, 200);
 }
 
 function prevImage() {
   currentImageIndex--;
   if (currentImageIndex < 0)
     currentImageIndex = currentGalleryImages.length - 1;
-  updateLightboxView("prev"); // Pass the swipe direction
+  updateLightboxView("prev");
 }
 
 function nextImage() {
   currentImageIndex++;
   if (currentImageIndex >= currentGalleryImages.length) currentImageIndex = 0;
-  updateLightboxView("next"); // Pass the swipe direction
+  updateLightboxView("next");
 }
 
 lightboxModal.addEventListener("click", (e) => {
@@ -413,7 +457,6 @@ drawerOverlay.addEventListener("click", () => {
   drawerOverlay.classList.remove("show");
 });
 
-// FIXED: Targeting the specific handle in the about drawer so it doesn't conflict with the upload sheet
 document
   .querySelector("#about-drawer .drawer-handle")
   .addEventListener("click", () => {
@@ -432,17 +475,16 @@ function initThemeLogic() {
   }
 
   function applyTheme(isDark) {
-    // Grab the meta tag that controls the phone's top status bar
     const themeMeta = document.querySelector('meta[name="theme-color"]');
 
     if (isDark) {
       body.classList.add("dark-mode");
       themeToggle.innerText = "☀️";
-      if (themeMeta) themeMeta.setAttribute("content", "#0d1117"); // Dark mode status bar
+      if (themeMeta) themeMeta.setAttribute("content", "#0d1117");
     } else {
       body.classList.remove("dark-mode");
       themeToggle.innerText = "🌙";
-      if (themeMeta) themeMeta.setAttribute("content", "#fffcfb"); // Light mode status bar
+      if (themeMeta) themeMeta.setAttribute("content", "#fffcfb");
     }
   }
 
@@ -472,7 +514,6 @@ function initThemeLogic() {
     });
 }
 
-// FIXED: Consolidated window.onload to fire both initializing functions
 window.onload = () => {
   initApp();
   initThemeLogic();

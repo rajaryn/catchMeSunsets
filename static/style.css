@@ -17,7 +17,7 @@ html {
     z-index: 1;
 }
 
-/* Floating Upload Button (Glassmorphism Style) */
+/* Floating Upload Button */
 .upload-btn {
     position: absolute;
     bottom: 30px;
@@ -37,7 +37,8 @@ html {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
     white-space: nowrap;
-    max-width: 90vw;
+    max-width: calc(100vw - 40px);
+    box-sizing: border-box;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -74,22 +75,28 @@ html {
     opacity: 0;
     left: 50%;
     transform: translateX(-50%);
+
+    /* Matches Top Pill perfectly */
     background: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     border: 1px solid rgba(255, 255, 255, 0.3);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+
+    /* Matches Vesper text color */
     color: #333;
-    padding: 12px 24px;
+
+    padding: 14px 28px;
+    max-width: calc(100vw - 40px);
+    box-sizing: border-box;
     border-radius: 30px;
     font-weight: bold;
-    font-size: 14px;
+    font-size: 16px;
     z-index: 3000;
     transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
     width: max-content;
-    max-width: 85vw;
     text-align: center;
-    line-height: 1.4;
+    line-height: 1.5;
 }
 
 .toast.show {
@@ -102,39 +109,98 @@ html {
     border: none;
 }
 
+/* 1. THE ARCHIVE PIN*/
 .premium-pin {
     width: 14px;
     height: 14px;
     background-color: #ff5e3a;
+    /* Solid Vesper Orange */
     border-radius: 50%;
-    border: 3px solid #ffffff;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    border: 2px solid #ffffff;
+    /* Crisp white border */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    /* Standard soft shadow, no glow */
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    cursor: pointer;
 }
 
-.premium-pin::after {
+/* Wakes up beautifully when the user hovers or taps it */
+.premium-pin:hover {
+    transform: scale(1.3);
+    box-shadow: 0 4px 12px rgba(255, 94, 58, 0.4);
+    /* Gentle orange glow on hover */
+}
+
+/* Dark mode adjustment for the border to keep it soft */
+body.dark-mode .premium-pin {
+    border-color: #e0e0e0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+body.dark-mode .premium-pin:hover {
+    border-color: #ffffff;
+}
+
+/* =========================================
+   2. THE "TODAY" PIN (Live Core & Pulse)
+   ========================================= */
+.today-pin {
+    width: 16px;
+    /* Slightly larger to hold the core */
+    height: 16px;
+    background-color: #ff5e3a;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 12px rgba(255, 94, 58, 0.8);
+    /* Orange glow */
+    position: relative;
+    z-index: 1000 !important;
+    /* Always sits on top */
+    transition: transform 0.2s ease;
+
+    /* Flexbox used to perfectly center the new "Live Core" */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.today-pin:hover {
+    transform: scale(1.15);
+}
+
+/* THE NEW EXTRA: A glowing white "Live Core" in the center */
+.today-pin::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background-color: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.9);
+}
+
+/* The Vesper Orange Radar Pulse */
+.today-pin::after {
     content: '';
     position: absolute;
-    width: 100%;
-    height: 100%;
-    background-color: transparent;
-    border: 2px solid rgba(255, 94, 58, 0.8);
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
     border-radius: 50%;
-    z-index: -1;
-    animation: radarPulse 2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+    border: 2px solid rgba(255, 94, 58, 0.9);
+    animation: radarPulseActive 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+    pointer-events: none;
 }
 
-@keyframes radarPulse {
+@keyframes radarPulseActive {
     0% {
-        transform: scale(1);
+        transform: scale(0.5);
         opacity: 1;
     }
 
     100% {
-        transform: scale(3.5);
+        transform: scale(2.5);
         opacity: 0;
     }
 }
@@ -212,7 +278,6 @@ html {
 }
 
 /* --- Gallery Image Badges & Dates --- */
-/* --- Gallery Image Badges (Sun/Moon) --- */
 .type-badge {
     position: absolute;
     top: 10px;
@@ -221,7 +286,6 @@ html {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid transparent;
-
     padding: 6px 8px;
     border-radius: 15px;
     font-size: 0.85rem;
@@ -234,9 +298,7 @@ html {
 /* Dark Mode Override for the Emoji Badge */
 body.dark-mode .type-badge {
     background: rgba(0, 0, 0, 0.5);
-    /* Deep dark frost */
     border-color: rgba(255, 255, 255, 0.15);
-    /* Subtle glass edge */
 }
 
 .image-date {
@@ -449,7 +511,8 @@ body.dark-mode .image-date {
     border-radius: 30px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     width: max-content;
-    max-width: 90vw;
+    max-width: calc(100vw - 40px);
+    box-sizing: border-box;
     transition: all 0.3s ease;
 }
 
@@ -474,7 +537,7 @@ body.dark-mode .image-date {
     transition: color 0.3s ease;
 }
 
-/* --- The Poetic Tooltip (No Animation, Elegant Font) --- */
+/* --- The Poetic Tooltip --- */
 .brand-link::after {
     content: 'read the story';
     position: absolute;
@@ -497,7 +560,6 @@ body.dark-mode .brand-link::after {
     color: #e0e0e0;
 }
 
-/* Reliably triggers on hover (desktop) or tap (mobile) */
 .brand-link:hover::after,
 .brand-link:active::after {
     opacity: 0.9;
@@ -549,7 +611,6 @@ body.dark-mode .theme-btn::after {
     color: #e0e0e0;
 }
 
-/* Reliably triggers on hover or tap */
 .theme-btn:hover::after,
 .theme-btn:active::after {
     opacity: 0.9;
@@ -571,7 +632,6 @@ body.dark-mode .theme-btn::after {
     color: white !important;
 }
 
-/* Make the theme button pop on pill hover */
 .top-pill:hover .theme-btn,
 .top-pill:active .theme-btn {
     background: rgba(255, 255, 255, 0.2) !important;
@@ -781,4 +841,15 @@ body.dark-mode .theme-btn {
         font-size: 0.75rem;
         padding: 4px 6px;
     }
+}
+
+/* Sync Toast with Vesper Pill in Dark Mode */
+body.dark-mode .toast {
+    /* Matches the Vesper brand text in dark mode */
+    color: #e6e6e6;
+
+    /* Removes the heavy bright background from the previous version 
+       so it matches the clean glass of the top pill */
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.2);
 }

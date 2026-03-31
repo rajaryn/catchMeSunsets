@@ -174,7 +174,6 @@ def upload():
 
 @app.route('/pins', methods=['GET'])
 def get_pins():
-    # 1. Safely get the arguments (they will be None if not provided)
     lat = request.args.get('lat')
     lon = request.args.get('lon')
 
@@ -185,27 +184,44 @@ def get_pins():
     cursor = conn.cursor(dictionary=True)
 
     try:
-        # 2. The IF/ELSE Check
         if lat and lon:
-            # If they provide a location, fetch pins ordered by distance 
+            # If they provide a location, fetch pins ordered by distance
+            # Added `p.` aliases to avoid column confusion during the JOIN
             query = """
-                SELECT id, lat, lon, created_at,
-                ( 3959 * acos( cos( radians(%s) ) * cos( radians( lat ) ) * cos( radians( lon ) - radians(%s) ) + sin( radians(%s) ) * sin( radians( lat ) ) ) ) AS distance 
-                FROM pins 
+                SELECT p.id, p.lat, p.lon, p.created_at, MAX(i.uploaded_at) as last_upload_at,
+                ( 3959 * acos( cos( radians(%s) ) * cos( radians( p.lat ) ) * cos( radians( p.lon ) - radians(%s) ) + sin( radians(%s) ) * sin( radians( p.lat ) ) ) ) AS distance 
+                FROM pins p
+                LEFT JOIN images i ON p.id = i.pin_id
+                GROUP BY p.id
                 ORDER BY distance 
                 LIMIT 100
             """
             cursor.execute(query, (float(lat), float(lon), float(lat)))
         else:
-            # If no location is provided (Global View), just fetch the latest pins!
-            query = "SELECT id, lat, lon, created_at FROM pins ORDER BY created_at DESC LIMIT 200"
+            #Fetch recent pins and their latest upload date
+            query = """
+                SELECT p.id, p.lat, p.lon, p.created_at, MAX(i.uploaded_at) as last_upload_at 
+                FROM pins p
+                LEFT JOIN images i ON p.id = i.pin_id
+                GROUP BY p.id
+                ORDER BY last_upload_at DESC 
+                LIMIT 200
+            """
             cursor.execute(query)
 
         pins = cursor.fetchall()
+        
+        # 3. Format datetime objects into strings safely before sending to JavaScript
+        for pin in pins:
+            if pin.get('created_at') and hasattr(pin['created_at'], 'isoformat'):
+                pin['created_at'] = pin['created_at'].isoformat()
+            if pin.get('last_upload_at') and hasattr(pin['last_upload_at'], 'isoformat'):
+                pin['last_upload_at'] = pin['last_upload_at'].isoformat()
+
         return jsonify(pins), 200
 
     except Exception as e:
-        print(f"🔥 DB ERROR: {e}")
+        print(f"DB ERROR: {e}")
         return jsonify({'error': 'Failed to fetch pins'}), 500
     finally:
         cursor.close()
