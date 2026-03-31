@@ -83,7 +83,14 @@ def server_error(e):
 def offline():
     return render_template('offline.html')
 
+# A super lightweight endpoint for pinging services to keep the server awake
+@app.route('/wake', methods=['GET'])
+def wake_up():
+    return jsonify({"message": "The sky is awake."}), 200
+
 # --- Frontend Serving Routes ---
+
+
 @app.route('/', methods=['GET'])
 def index():
     return render_template('index.html')
