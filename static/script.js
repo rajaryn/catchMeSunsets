@@ -150,16 +150,16 @@ uploadBtn.addEventListener("click", () => {
       (position) => {
         currentUserLat = position.coords.latitude;
         currentUserLon = position.coords.longitude;
-        
+
         // 1. Pan the map beautifully to their location
         map.setView([currentUserLat, currentUserLon], 15);
-        
+
         // 2. Pop the quiet toast
         showToast("Live at your location");
-        
+
         // 3. Change the button to be ready for the actual upload,
         // but DO NOT open the drawer yet!
-        uploadBtn.innerText = "Select Photo"; 
+        uploadBtn.innerText = "Select Photo";
         uploadBtn.disabled = false;
       },
       (error) => {
@@ -213,26 +213,67 @@ const handleFileSelection = async (event) => {
   uploadSheet.classList.remove("show");
   drawerOverlay.classList.remove("show");
 
+  // Keep a reference if we need to revert on failure
   const originalText = uploadBtn.innerText;
-  uploadBtn.innerText = "Processing...";
+
+  // ONE unified, poetic loading message for the entire process
+  uploadBtn.innerText = "Catching the light...";
   uploadBtn.disabled = true;
 
-  if (file.name.toLowerCase().endsWith(".heic") || file.type === "image/heic") {
+  // --- 1. TIME TRAVEL (EXIF EXTRACTION) ---
+  // Do this BEFORE HEIC conversion, because conversion strips the metadata!
+  let finalLat = currentUserLat;
+  let finalLon = currentUserLon;
+  let finalTime = new Date().toISOString(); // Default to right now
+
+  try {
+    // Parse the image for GPS and Time tags
+    const exifData = await exifr.parse(file);
+    if (exifData) {
+      if (exifData.latitude && exifData.longitude) {
+        finalLat = exifData.latitude;
+        finalLon = exifData.longitude;
+        console.log("Time Travel: Found original GPS coordinates!");
+      }
+      if (exifData.DateTimeOriginal) {
+        finalTime = exifData.DateTimeOriginal.toISOString();
+        console.log("Time Travel: Found original capture time!");
+      }
+    }
+  } catch (error) {
+    console.log("No EXIF data found, relying on live location and time.");
+  }
+
+  // --- 2. HEIC CONVERTER (Lazy Loaded) ---
+  const fileName = file.name.toLowerCase();
+  const isAppleFormat =
+    fileName.endsWith(".heic") ||
+    fileName.endsWith(".heif") ||
+    file.type === "image/heic" ||
+    file.type === "image/heif";
+
+  if (isAppleFormat) {
     try {
-    s
       await loadHeicLibrary();
 
-      const blob = await heic2any({
+      let conversionResult = await heic2any({
         blob: file,
         toType: "image/jpeg",
         quality: 0.8,
       });
-      file = new File([blob], file.name.replace(/\.heic/i, ".jpg"), {
+
+      const finalBlob = Array.isArray(conversionResult)
+        ? conversionResult[0]
+        : conversionResult;
+
+      // Use a Regex to replace either .heic or .heif with .jpg
+      file = new File([finalBlob], file.name.replace(/\.hei[cf]/i, ".jpg"), {
         type: "image/jpeg",
       });
     } catch (e) {
-      showToast("Could not process HEIC file", true);
-      uploadBtn.innerText = originalText;
+      console.error("Apple Image Conversion Error:", e);
+      showToast("Could not process Apple image.", true);
+      uploadBtn.innerText = "Capture";
       uploadBtn.disabled = false;
       fileInputCamera.value = "";
       fileInputGallery.value = "";
@@ -240,11 +281,14 @@ const handleFileSelection = async (event) => {
     }
   }
 
-  uploadBtn.innerText = "Uploading...";
+  // --- 3. EXECUTE UPLOAD ---
   const formData = new FormData();
   formData.append("image", file);
-  formData.append("lat", currentUserLat);
-  formData.append("lon", currentUserLon);
+
+  // Send the extracted (or live) data to the backend
+  formData.append("lat", finalLat);
+  formData.append("lon", finalLon);
+  formData.append("captured_at", finalTime);
 
   const selectedType =
     document.querySelector('input[name="capture_type"]:checked')?.value ||
@@ -256,10 +300,12 @@ const handleFileSelection = async (event) => {
       method: "POST",
       body: formData,
     });
+
     if (response.ok) {
       await fetchAllPins();
-      const successWord = selectedType === "moon" ? "Moon" : "Sunset";
-      showToast(`${successWord} captured successfully!`);
+      const successWord =
+        selectedType === "moon" ? "Night sky" : "Evening";
+      showToast(`${successWord} archived successfully.`);
     } else {
       const errorData = await response.json();
       showToast("Upload failed: " + (errorData.error || "Unknown error"), true);
@@ -267,7 +313,7 @@ const handleFileSelection = async (event) => {
   } catch (error) {
     showToast("Network error while uploading.", true);
   } finally {
-    uploadBtn.innerText = "Upload Another";
+    uploadBtn.innerText = "Capture";
     uploadBtn.disabled = false;
     fileInputCamera.value = "";
     fileInputGallery.value = "";
@@ -513,6 +559,14 @@ function initThemeLogic() {
       }
     });
 }
+
+// --- AUTO-REFRESH ON WAKE ---
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    console.log("App woke up. Refreshing the sky...");
+    fetchAllPins();
+  }
+});
 
 window.onload = () => {
   initApp();

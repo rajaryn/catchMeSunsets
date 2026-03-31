@@ -1,8 +1,9 @@
 import os
 import math
 import heapq
-from datetime import datetime
-from flask import Flask, Response, request, jsonify, render_template, send_from_directory
+from datetime import datetime, timezone
+from flask import Flask, Response, request, jsonify, render_template, send_from_directory 
+from flask import make_response
 from flask_cors import CORS
 from db import get_db_connection
 import cloudinary
@@ -59,20 +60,16 @@ def requires_auth(f):
 # Helper: Extract Cloudinary Public ID from URL
 def get_cloudinary_public_id(url):
     try:
-        # Example URL: https://res.cloudinary.com/.../upload/v1234567/catchmesunsets/abc.jpg
         parts = url.split('/upload/')
         if len(parts) == 2:
             path_parts = parts[1].split('/')
-            # Remove the version tag (e.g., 'v1234567') if it exists
             if path_parts[0].startswith('v') and path_parts[0][1:].isdigit():
                 path_parts = path_parts[1:]
             
-            # Remove the file extension (e.g., '.jpg')
             file_name_with_ext = path_parts[-1]
             file_name = file_name_with_ext.rsplit('.', 1)[0]
             path_parts[-1] = file_name
             
-            # Rejoin to get 'catchmesunsets/abc'
             return '/'.join(path_parts)
     except Exception as e:
         print(f"Error parsing Cloudinary URL: {e}")
@@ -80,12 +77,10 @@ def get_cloudinary_public_id(url):
 
 @app.errorhandler(500)
 def server_error(e):
-    # Make sure to put the 500.html file inside your 'templates' folder
     return render_template('offline.html'), 500
 
 @app.route('/offline.html')
 def offline():
-    # This lets the Service Worker grab the page to store it
     return render_template('offline.html')
 
 # --- Frontend Serving Routes ---
@@ -99,7 +94,9 @@ def serve_manifest():
 
 @app.route('/service_worker.js')
 def serve_sw():
-    return send_from_directory('static', 'service_worker.js')
+    response = make_response(send_from_directory('static', 'service_worker.js'))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return response
 
 @app.route('/images/<path:filename>')
 def custom_static(filename):
@@ -115,6 +112,9 @@ def upload():
     lat_str = request.form.get('lat')
     lon_str = request.form.get('lon')
     capture_type = request.form.get('capture_type', 'sun')
+    
+    # NEW: Grab the historical EXIF time from the frontend (if it exists)
+    captured_at_str = request.form.get('captured_at')
 
     if not file or file.filename == '' or not lat_str or not lon_str:
         return jsonify({'error': 'Missing required data'}), 400
@@ -129,10 +129,9 @@ def upload():
     try:
         upload_result = cloudinary.uploader.upload(
             file,
-            folder="catchmesunsets", # Creates a neat folder in your Cloudinary dashboard
+            folder="catchmesunsets", 
             resource_type="image"
         )
-        # Extract the secure HTTPS URL provided by Cloudinary
         image_url = upload_result.get('secure_url')
     except Exception as e:
         print(f"🔥 CLOUDINARY ERROR: {e}") 
@@ -156,10 +155,16 @@ def upload():
             cursor.execute("INSERT INTO pins (lat, lon) VALUES (%s, %s)", (lat, lon))
             pin_id = cursor.lastrowid
 
-        # Insert the absolute Cloudinary URL AND capture_type into the database
+        # Determine the correct timestamp to save
+        if captured_at_str:
+            final_time = captured_at_str # Uses historical EXIF date
+        else:
+            final_time = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S') # Uses current date
+
+        # Insert the image with the explicitly defined time
         cursor.execute(
-            "INSERT INTO images (pin_id, file_path, capture_type) VALUES (%s, %s, %s)",
-            (pin_id, image_url, capture_type)
+            "INSERT INTO images (pin_id, file_path, capture_type, uploaded_at) VALUES (%s, %s, %s, %s)",
+            (pin_id, image_url, capture_type, final_time)
         )
 
         conn.commit()
@@ -185,8 +190,6 @@ def get_pins():
 
     try:
         if lat and lon:
-            # If they provide a location, fetch pins ordered by distance
-            # Added `p.` aliases to avoid column confusion during the JOIN
             query = """
                 SELECT p.id, p.lat, p.lon, p.created_at, MAX(i.uploaded_at) as last_upload_at,
                 ( 3959 * acos( cos( radians(%s) ) * cos( radians( p.lat ) ) * cos( radians( p.lon ) - radians(%s) ) + sin( radians(%s) ) * sin( radians( p.lat ) ) ) ) AS distance 
@@ -198,7 +201,6 @@ def get_pins():
             """
             cursor.execute(query, (float(lat), float(lon), float(lat)))
         else:
-            #Fetch recent pins and their latest upload date
             query = """
                 SELECT p.id, p.lat, p.lon, p.created_at, MAX(i.uploaded_at) as last_upload_at 
                 FROM pins p
@@ -211,7 +213,6 @@ def get_pins():
 
         pins = cursor.fetchall()
         
-        # 3. Format datetime objects into strings safely before sending to JavaScript
         for pin in pins:
             if pin.get('created_at') and hasattr(pin['created_at'], 'isoformat'):
                 pin['created_at'] = pin['created_at'].isoformat()
@@ -236,7 +237,6 @@ def get_gallery(pin_id):
     cursor = conn.cursor(dictionary=True)
 
     try:
-        
         cursor.execute(
             "SELECT id, file_path, uploaded_at, capture_type FROM images WHERE pin_id = %s ORDER BY uploaded_at DESC",
             (pin_id,)
@@ -270,17 +270,14 @@ def delete_image(image_id):
     
     cursor = conn.cursor(dictionary=True)
     try:
-        # 1. Find the image URL in the database
         cursor.execute("SELECT file_path FROM images WHERE id = %s", (image_id,))
         img = cursor.fetchone()
         
         if img:
-            # 2. Delete the physical file from Cloudinary
             public_id = get_cloudinary_public_id(img['file_path'])
             if public_id:
                 cloudinary.uploader.destroy(public_id)
             
-            # 3. Delete the record from your database
             cursor.execute("DELETE FROM images WHERE id = %s", (image_id,))
             conn.commit()
             return jsonify({"status": "success"}), 200
@@ -303,18 +300,14 @@ def delete_pin(pin_id):
         
     cursor = conn.cursor(dictionary=True)
     try:
-        # 1. Find ALL images associated with this pin
         cursor.execute("SELECT file_path FROM images WHERE pin_id = %s", (pin_id,))
         images = cursor.fetchall()
         
-        # 2. Delete all physical files from Cloudinary
         for img in images:
             public_id = get_cloudinary_public_id(img['file_path'])
             if public_id:
                 cloudinary.uploader.destroy(public_id)
                 
-        # 3. Delete the pin from your database 
-        # (Because of ON DELETE CASCADE in your db.py, this automatically deletes the image rows too!)
         cursor.execute("DELETE FROM pins WHERE id = %s", (pin_id,))
         conn.commit()
         

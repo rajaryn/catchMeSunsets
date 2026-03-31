@@ -43,13 +43,23 @@ html {
     text-overflow: ellipsis;
 }
 
-.upload-btn:hover,
-.upload-btn:active,
-.upload-btn:focus {
+/* Apply hover ONLY on devices with a real mouse */
+@media (hover: hover) {
+    .upload-btn:hover {
+        background-color: #ff5e3a !important;
+        color: white !important;
+        transform: translateX(-50%) scale(1.05) !important;
+        box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4) !important;
+        border-color: transparent !important;
+    }
+}
+
+/* Apply active state for the exact moment of a click/tap */
+.upload-btn:active {
     background-color: #ff5e3a !important;
     color: white !important;
-    transform: translateX(-50%) scale(1.05) !important;
-    box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4) !important;
+    transform: translateX(-50%) scale(0.98) !important;
+    box-shadow: 0 2px 10px rgba(255, 94, 58, 0.4) !important;
     border-color: transparent !important;
 }
 
@@ -739,14 +749,25 @@ body.dark-mode .theme-btn::after {
     transition: all 0.3s ease;
 }
 
-.action-btn:hover,
-.action-btn:active,
-.action-btn:focus {
+/* Apply hover ONLY on devices with a real mouse */
+@media (hover: hover) {
+    .action-btn:hover {
+        background-color: #ff5e3a !important;
+        color: white !important;
+        border-color: transparent !important;
+        box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4) !important;
+        transform: scale(1.02) !important;
+    }
+}
+
+/* Apply active state for the exact moment of a click/tap */
+.action-btn:active {
     background-color: #ff5e3a !important;
     color: white !important;
     border-color: transparent !important;
-    box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4) !important;
-    transform: scale(1.02) !important;
+    box-shadow: 0 2px 10px rgba(255, 94, 58, 0.4) !important;
+    transform: scale(0.98) !important;
+    /* Satisfying click dip */
 }
 
 /* --- DARK MODE & MOON STYLES --- */

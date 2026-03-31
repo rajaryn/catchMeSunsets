@@ -6,7 +6,8 @@
     <title>Vesper</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=12" />
+    <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=20" />
     
     <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -31,35 +32,43 @@
         <div class="about-content">
             <p style="text-align: center; margin-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px;">
                 <em style="color: #ff5e3a; font-size: 1.15rem; letter-spacing: 0.5px;"><strong>vesper</strong> (n.) — the evening star; twilight.</em>
+            </p>
             <div id="about-content" class="about-content">
-             <p>It started with a simple conversation — about fleeting sunsets, a beautiful moon, all the small moments where you stop everything to look up at the sky. The ones that are so easy to miss, and yet somehow feel the most important.</p>
-
+              <p>It started with a simple conversation — about fleeting sunsets, a beautiful moon, all the small moments where you stop everything to look up at the sky. The ones that are so easy to miss, and yet somehow feel the most important.</p>
               <p>We wanted a place to hold onto that pause. Somewhere to catch the skies we missed, shared quietly by strangers who stopped, just like us. That's how <strong>Vesper</strong> was born.</p>
-
-              <p>No profiles, no followers, no noise — just a map of anonymous moments. Somewhere out there, someone looked up and decided to share it with you. Drop a pin. Share your sky.</p>
+              <p>No profiles, no followers, no noise — just a map of anonymous moments that someone, somewhere out there, looked up and decided to share.</p>
+              <p> Drop a pin. Share your sky.</p>
             </div>
             <p class="built-with">Built with 🧡</p>
         </div>
-    </div> <div id="upload-sheet" class="about-drawer" style="padding-bottom: 40px; z-index: 3600;">
+    </div> 
+
+    <div id="upload-sheet" class="about-drawer" style="padding-bottom: 40px; z-index: 3600;">
         <div class="drawer-handle" id="upload-handle"></div>
-        <h2 style="text-align: center; margin-bottom: 15px; font-size: 1.3rem;">Capture the Moment</h2>
         
-        <div class="type-selector" style="display: flex; justify-content: center; gap: 15px; margin-bottom: 25px;">
-            <label style="color: white; font-weight: bold; cursor: pointer;">
-                <input type="radio" name="capture_type" value="sun" checked> Sunset
+        <h2 style="text-align: center; margin-bottom: 10px; font-size: 1.4rem;">Archive the sky.</h2>
+        <p style="text-align: center; color: #aaa; font-size: 0.95rem; margin-bottom: 25px; line-height: 1.4;">
+            Whether it's a glowing dusk, a moody twilight, or a quiet moon. Save the fading light.
+        </p>
+        
+        <div class="type-selector" style="display: flex; justify-content: center; flex-wrap: wrap; gap: 15px; margin-bottom: 30px;">
+            <label style="color: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; white-space: nowrap;">
+                <input type="radio" name="capture_type" value="sun" checked style="margin-right: 8px;"> 
+                <span style="font-size: 0.95rem;">☀️ Dusk & Twilight</span>
             </label>
-            <label style="color: white; font-weight: bold; cursor: pointer;">
-                <input type="radio" name="capture_type" value="moon"> Moon
+            <label style="color: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; white-space: nowrap;">
+                <input type="radio" name="capture_type" value="moon" style="margin-right: 8px;"> 
+                <span style="font-size: 0.95rem;">🌙 Night Sky</span>
             </label>
         </div>
 
-        <button class="action-btn" id="btn-camera">Take Photo Now</button>
-        <button class="action-btn" id="btn-gallery">Choose from Gallery</button>
+        <button class="action-btn" id="btn-camera">Open Camera</button>
+        <button class="action-btn" id="btn-gallery">Choose from Camera Roll</button>
     </div>
 
     <div id="map"></div>
 
-    <button class="upload-btn" id="upload-btn">Upload your moment</button>
+    <button class="upload-btn" id="upload-btn">Capture</button>
     
     <input type="file" id="file-input-gallery" accept="image/jpeg, image/png, image/webp, image/heic" style="display: none;" />
     <input type="file" id="file-input-camera" accept="image/jpeg, image/png, image/webp, image/heic" capture="environment" style="display: none;" />
@@ -81,11 +90,13 @@
     <div id="toast" class="toast"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-    <script src="{{ url_for('static', filename='script.js') }}?v=12" defer></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=20" defer></script>
     
     <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
+            // FIXED: Changed service_worker.js to service-worker.js (with a dash)
+            // to perfectly match the fix we made earlier in app.py
             navigator.serviceWorker.register('/service_worker.js')
                 .then(reg => console.log('Service Worker registered!', reg.scope))
                 .catch(err => console.error('Service Worker failed:', err));

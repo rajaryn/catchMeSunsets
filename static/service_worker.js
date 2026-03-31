@@ -102,10 +102,22 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Handle Static Assets (CSS, JS, Leaflet)
+  // 3. Stale-While-Revalidate for Static Assets (CSS, JS, Leaflet)
   event.respondWith(
-    caches.match(event.request, { ignoreSearch: true }).then((response) => {
-      return response || fetch(event.request);
-    }),
+    caches.match(event.request).then((cachedResponse) => {
+      // 1. Kick off a network request in the background to get the freshest file
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
+        // 2. Silently update the cache with this fresh file for next time
+        if (networkResponse && networkResponse.status === 200) {
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, networkResponse.clone());
+          });
+        }
+        return networkResponse;
+      }).catch(err => console.log("Network fetch failed, using cache.", err));
+
+      // 3. INSTANTLY return the cached version if we have it, 
+      // otherwise wait for the network to finish.
+      return cachedResponse || fetchPromise;
+    })
   );
-});
