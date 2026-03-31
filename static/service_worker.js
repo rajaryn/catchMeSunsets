@@ -105,16 +105,24 @@ self.addEventListener("fetch", (event) => {
   // 3. Stale-While-Revalidate for Static Assets (CSS, JS, Leaflet)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      // 1. Kick off a network request in the background to get the freshest file
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
-        // 2. Silently update the cache with this fresh file for next time
-        if (networkResponse && networkResponse.status === 200) {
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, networkResponse.clone());
-          });
-        }
-        return networkResponse;
-      }).catch(err => console.log("Network fetch failed, using cache.", err));
+      // 1. Kick off a network request in the background
+      const fetchPromise = fetch(event.request)
+        .then((networkResponse) => {
+          // 2. Clone the response safely BEFORE putting it in the cache
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return networkResponse;
+        })
+        .catch((err) => {
+          console.log("Network fetch failed:", err);
+          // THE FIX: We must throw the error so the browser knows the file failed to load,
+          // rather than silently returning 'undefined' and crashing the Service Worker.
+          throw err;
+        });
 
       // 3. INSTANTLY return the cached version if we have it, 
       // otherwise wait for the network to finish.

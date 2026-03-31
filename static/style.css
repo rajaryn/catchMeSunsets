@@ -119,30 +119,32 @@ html {
     border: none;
 }
 
-/* 1. THE ARCHIVE PIN*/
+/* =========================================
+   1. THE ARCHIVE PIN (Standard Base)
+   ========================================= */
 .premium-pin {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    /* Matched to Today pin size */
+    height: 16px;
     background-color: #ff5e3a;
     /* Solid Vesper Orange */
     border-radius: 50%;
     border: 2px solid #ffffff;
     /* Crisp white border */
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    /* Standard soft shadow, no glow */
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     position: relative;
     cursor: pointer;
+    opacity: 1;
+    /* Completely solid */
 }
 
-/* Wakes up beautifully when the user hovers or taps it */
 .premium-pin:hover {
-    transform: scale(1.3);
+    transform: scale(1.15);
+    /* Matched hover scale */
     box-shadow: 0 4px 12px rgba(255, 94, 58, 0.4);
-    /* Gentle orange glow on hover */
 }
 
-/* Dark mode adjustment for the border to keep it soft */
 body.dark-mode .premium-pin {
     border-color: #e0e0e0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
@@ -153,33 +155,40 @@ body.dark-mode .premium-pin:hover {
 }
 
 /* =========================================
-   2. THE "TODAY" PIN (Live Core & Pulse)
+   2. THE "TODAY" PIN (Base + Core + Pulse)
    ========================================= */
 .today-pin {
     width: 16px;
-    /* Slightly larger to hold the core */
     height: 16px;
     background-color: #ff5e3a;
+    /* Exact same base as premium-pin */
     border-radius: 50%;
     border: 2px solid #ffffff;
     box-shadow: 0 0 12px rgba(255, 94, 58, 0.8);
-    /* Orange glow */
     position: relative;
     z-index: 1000 !important;
-    /* Always sits on top */
     transition: transform 0.2s ease;
-
-    /* Flexbox used to perfectly center the new "Live Core" */
     display: flex;
     align-items: center;
     justify-content: center;
+    opacity: 1;
+    /* Completely solid */
 }
 
 .today-pin:hover {
     transform: scale(1.15);
+    /* Matched hover scale */
 }
 
-/* THE NEW EXTRA: A glowing white "Live Core" in the center */
+body.dark-mode .today-pin {
+    border-color: #e0e0e0;
+}
+
+body.dark-mode .today-pin:hover {
+    border-color: #ffffff;
+}
+
+/* The glowing white "Live Core" Bullseye */
 .today-pin::before {
     content: '';
     width: 6px;
