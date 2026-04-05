@@ -103,6 +103,7 @@ function initApp() {
       maxZoom: 20,
       keepBuffer: 8,
       updateWhenIdle: true,
+      detectRetina: false
     },
   ).addTo(map);
 
@@ -630,8 +631,16 @@ function initThemeLogic() {
 // --- AUTO-REFRESH ON WAKE ---
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
-    console.log("App woke up. Refreshing the sky...");
-    fetchAllPins();
+    
+    // Do not refresh the map if they are in the middle of uploading!
+    // This prevents the map from flashing and interrupting the camera return.
+    if (uploadBtn.innerText === "Capture" && !uploadSheet.classList.contains("show")) {
+      console.log("App woke up naturally. Refreshing the sky...");
+      fetchAllPins();
+    } else {
+      console.log("Returned from camera. Skipping refresh to protect upload.");
+    }
+    
   }
 });
 

@@ -453,8 +453,8 @@ body.dark-mode .image-date {
     color: #333;
     border: 1px solid rgba(255, 255, 255, 0.4);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    width: 45px;
-    height: 45px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -596,8 +596,8 @@ body.dark-mode .brand-link::after {
     border: 1px solid rgba(255, 255, 255, 0.4);
     font-size: 1.1rem;
     cursor: pointer;
-    width: 35px;
-    height: 35px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     display: flex;
     align-items: center;

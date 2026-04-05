@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vesper</title>
-    
+    <meta name="description" content="Vesper: Drop a pin and share your sky. A beautiful, map-based gallery to capture and share sunsets and night skies.">
+
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js" defer></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=20" />
@@ -16,11 +18,11 @@
 </head>
 <body>
     <div class="top-pill">
-        <button id="about-btn" class="brand-link">
+        <button id="about-btn" class="brand-link" aria-label="About Vesper">
             Vesper
         </button>
         <div style="display: flex; align-items: center;">
-            <button id="theme-toggle" class="theme-btn">🌙</button>
+            <button id="theme-toggle" class="theme-btn" aria-label="Toggle dark mode">🌙</button>
         </div>
     </div>
 
@@ -62,28 +64,28 @@
             </label>
         </div>
 
-        <button class="action-btn" id="btn-camera">Open Camera</button>
-        <button class="action-btn" id="btn-gallery">Choose from Camera Roll</button>
+        <button class="action-btn" id="btn-camera" aria-label="Open Camera">Open Camera</button>
+        <button class="action-btn" id="btn-gallery" aria-label="Choose from Camera Roll">Choose from Camera Roll</button>
     </div>
 
     <div id="map"></div>
 
-    <button class="upload-btn" id="upload-btn">Capture</button>
+    <button class="upload-btn" id="upload-btn" aria-label="Capture the sky">Capture</button>
     
-    <input type="file" id="file-input-gallery" accept="image/jpeg, image/png, image/webp, image/heic" style="display: none;" />
-    <input type="file" id="file-input-camera" accept="image/jpeg, image/png, image/webp, image/heic" capture="environment" style="display: none;" />
+    <input type="file" id="file-input-gallery" accept="image/*" style="display: none;" />
+    <input type="file" id="file-input-camera" accept="image/*" capture="environment" style="display: none;"/>
 
     <div id="gallery-modal">
-        <span class="close-btn" id="close-btn">&times;</span> 
+        <span class="close-btn" id="close-btn" role="button" aria-label="Close gallery" tabindex="0">&times;</span> 
         <div id="gallery-content" class="gallery-grid"></div>
         <div id="gallery-loading" class="fill-loader" style="display:none;"></div>
     </div>
 
     <div id="lightbox-modal" class="lightbox">
-        <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
-        <button class="nav-btn prev-btn" onclick="prevImage()">&#10094;</button>
+        <span class="lightbox-close" onclick="closeLightbox()" role="button" aria-label="Close fullscreen image" tabindex="0">&times;</span>
+        <button class="nav-btn prev-btn" onclick="prevImage()" aria-label="Previous image">&#10094;</button>
         <img id="lightbox-img" src="" alt="Fullscreen Sunset">
-        <button class="nav-btn next-btn" onclick="nextImage()">&#10095;</button>
+        <button class="nav-btn next-btn" onclick="nextImage()" aria-label="Next image">&#10095;</button>
         <div id="lightbox-date" class="lightbox-date"></div>
     </div>
 
@@ -95,8 +97,6 @@
     <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            // FIXED: Changed service_worker.js to service-worker.js (with a dash)
-            // to perfectly match the fix we made earlier in app.py
             navigator.serviceWorker.register('/service_worker.js')
                 .then(reg => console.log('Service Worker registered!', reg.scope))
                 .catch(err => console.error('Service Worker failed:', err));
