@@ -132,13 +132,20 @@ def upload():
     except ValueError:
         return jsonify({'error': 'Invalid coordinates format'}), 400
 
-    # 2. Upload directly to Cloudinary
+   
+    # 2. Upload directly to Cloudinary with STANDARD CONVERSION
     try:
         upload_result = cloudinary.uploader.upload(
             file,
             folder="catchmesunsets", 
-            resource_type="image"
+            resource_type="image",
+            format="jpg", # Force everything to be a universal JPEG
+            transformation=[
+                {'width': 1080, 'crop': 'limit'}, # Shrinks massive photos, leaves small ones alone
+                {'quality': 'auto'} # Compresses file size without losing visible quality
+            ]
         )
+        image_url = upload_result.get('secure_url')
         image_url = upload_result.get('secure_url')
     except Exception as e:
         print(f"🔥 CLOUDINARY ERROR: {e}") 

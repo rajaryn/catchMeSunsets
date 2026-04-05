@@ -40,6 +40,50 @@ function showToast(message, isError = false) {
   }, 3000);
 }
 
+// --- NETWORK SPEED DETECTOR ---
+function isNetworkSlow() {
+  if (navigator.connection && navigator.connection.effectiveType) {
+    const speed = navigator.connection.effectiveType;
+    if (speed === "2g" || speed === "slow-2g" || speed === "3g") {
+      return true;
+    }
+  }
+  return false;
+}
+
+// --- PWA HARDWARE BACK BUTTON LOGIC ---
+window.addEventListener("popstate", (e) => {
+  // Check what state the phone's history just went back to
+  const state = e.state ? e.state.modal : null;
+
+  // 1. Lightbox Layer
+  if (state !== "lightbox") {
+    lightboxModal.classList.remove("show");
+  }
+  // 2. Gallery Layer
+  if (state !== "gallery" && state !== "lightbox") {
+    galleryModal.classList.remove("show-modal");
+    // Delay clearing content so the fade-out animation is smooth
+    setTimeout(() => {
+      if (!galleryModal.classList.contains("show-modal")) {
+        galleryContent.innerHTML = "";
+      }
+    }, 400);
+  }
+  // 3. Upload Drawer Layer
+  if (state !== "upload") {
+    uploadSheet.classList.remove("show");
+  }
+  // 4. About Drawer Layer
+  if (state !== "about") {
+    aboutDrawer.classList.remove("show");
+  }
+  // 5. Global Overlay (Close if neither drawer is active)
+  if (state !== "upload" && state !== "about") {
+    drawerOverlay.classList.remove("show");
+  }
+});
+
 // --- 1. INITIAL LOAD ---
 function initApp() {
   const bounds = L.latLngBounds(L.latLng(-89.9, -180), L.latLng(89.9, 180));
@@ -52,16 +96,16 @@ function initApp() {
     minZoom: 2,
   });
 
-  // 1. YOUR ORIGINAL CLEAN MAP (Using Carto Light)
   L.tileLayer(
     "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
     {
       attribution: '&copy; <a href="https://carto.com/">Carto</a>',
       maxZoom: 20,
+      keepBuffer: 8,
+      updateWhenIdle: true,
     },
   ).addTo(map);
 
-  // 2. ENFORCING THE BORDERS (The GeoJSON Overlay)
   fetch("/static/india.geojson")
     .then((response) => {
       if (!response.ok) throw new Error("Failed to fetch GeoJSON");
@@ -91,21 +135,17 @@ async function fetchAllPins() {
     const pins = await response.json();
     markersLayer.clearLayers();
 
-    // Get today's local date formatted as YYYY-MM-DD
     const today = new Date();
     const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
     pins.forEach((pin) => {
       let isToday = false;
 
-      // Check if this pin has an upload, and if the date matches today
       if (pin.last_upload_at) {
-        // Convert the database timestamp into a safe local date (fixes iOS Safari bugs)
         const safeDateStr =
           pin.last_upload_at.replace(" ", "T") +
           (pin.last_upload_at.endsWith("Z") ? "" : "Z");
         const uploadDate = new Date(safeDateStr);
-
         const uploadDateString = `${uploadDate.getFullYear()}-${String(uploadDate.getMonth() + 1).padStart(2, "0")}-${String(uploadDate.getDate()).padStart(2, "0")}`;
 
         if (uploadDateString === todayString) {
@@ -113,7 +153,6 @@ async function fetchAllPins() {
         }
       }
 
-      // If it's today, use 'today-pin', otherwise use the normal 'premium-pin'
       const pinClass = isToday ? "today-pin" : "premium-pin";
 
       const dynamicIcon = L.divIcon({
@@ -123,8 +162,31 @@ async function fetchAllPins() {
         iconAnchor: [10, 10],
       });
 
-      const marker = L.marker([pin.lat, pin.lon], { icon: dynamicIcon });
-      marker.on("click", () => openGallery(pin.id));
+    
+      // Add a microscopic random offset (about 5-10 meters) to the coordinates.
+      // This ensures pins at the exact same location slightly separate when zoomed in!
+      const jitterLat = parseFloat(pin.lat) + (Math.random() - 0.5) * 0.00015;
+      const jitterLon = parseFloat(pin.lon) + (Math.random() - 0.5) * 0.00015;
+
+      const marker = L.marker([jitterLat, jitterLon], { icon: dynamicIcon });
+
+      // --- THE FLY-TO FIX ---
+      marker.on("click", () => {
+        const currentZoom = map.getZoom();
+        const streetLevelZoom = 18; // Close enough to see the jitter separation
+
+        if (currentZoom < streetLevelZoom) {
+          // If zoomed out, fly down to the cluster smoothly
+          map.flyTo([jitterLat, jitterLon], streetLevelZoom, {
+            duration: 0.8, // 0.8 seconds for a cinematic swoop
+            easeLinearity: 0.25,
+          });
+        } else {
+          // If already zoomed in, trigger the gallery!
+          openGallery(pin.id);
+        }
+      });
+
       markersLayer.addLayer(marker);
     });
   } catch (error) {
@@ -134,14 +196,18 @@ async function fetchAllPins() {
 
 // --- 2. MAIN UPLOAD BUTTON CLICK ---
 uploadBtn.addEventListener("click", () => {
-  // If we ALREADY have their location, clicking the button opens the drawer instantly
+  if (isNetworkSlow()) {
+    showToast("Weak signal detected. Uploads may take a while.");
+  }
+
+  // If we ALREADY have their location, trigger the drawer AND push history state
   if (currentUserLat && currentUserLon) {
+    history.pushState({ modal: "upload" }, "");
     uploadSheet.classList.add("show");
     drawerOverlay.classList.add("show");
     return;
   }
 
-  // If we DON'T have their location, we find them first
   if (navigator.geolocation) {
     uploadBtn.innerText = "Locating...";
     uploadBtn.disabled = true;
@@ -151,14 +217,9 @@ uploadBtn.addEventListener("click", () => {
         currentUserLat = position.coords.latitude;
         currentUserLon = position.coords.longitude;
 
-        // 1. Pan the map beautifully to their location
         map.setView([currentUserLat, currentUserLon], 15);
-
-        // 2. Pop the quiet toast
         showToast("Live at your location");
 
-        // 3. Change the button to be ready for the actual upload,
-        // but DO NOT open the drawer yet!
         uploadBtn.innerText = "Select Photo";
         uploadBtn.disabled = false;
       },
@@ -179,113 +240,69 @@ uploadBtn.addEventListener("click", () => {
   }
 });
 
-// --- 3. ACTION SHEET ROUTING ---
+// --- 3. ACTION SHEET ROUTING & CLOSING ---
 btnCamera.addEventListener("click", () => fileInputCamera.click());
 btnGallery.addEventListener("click", () => fileInputGallery.click());
 
+// Triggers the popstate event to elegantly close the drawer
 uploadHandle.addEventListener("click", () => {
-  uploadSheet.classList.remove("show");
-  drawerOverlay.classList.remove("show");
+  history.back();
 });
 
-// --- LAZY LOAD HEIC CONVERTER LOGIC ---
-let heicLoaded = false;
-function loadHeicLibrary() {
-  return new Promise((resolve, reject) => {
-    if (heicLoaded) return resolve();
-    const script = document.createElement("script");
-    script.src =
-      "https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
-    script.onload = () => {
-      heicLoaded = true;
-      resolve();
-    };
-    script.onerror = () => reject(new Error("Failed to load HEIC converter"));
-    document.head.appendChild(script);
+// Triggers the popstate event to elegantly close any open drawer
+drawerOverlay.addEventListener("click", () => {
+  if (
+    uploadSheet.classList.contains("show") ||
+    aboutDrawer.classList.contains("show")
+  ) {
+    history.back();
+  }
+});
+
+document
+  .querySelector("#about-drawer .drawer-handle")
+  .addEventListener("click", () => {
+    history.back();
   });
-}
 
 // --- 4. MASTER FILE HANDLING ---
 const handleFileSelection = async (event) => {
   let file = event.target.files[0];
   if (!file) return;
 
-  uploadSheet.classList.remove("show");
-  drawerOverlay.classList.remove("show");
+  // Elegantly close the drawer by stepping back in history
+  if (uploadSheet.classList.contains("show")) {
+    history.back();
+  }
 
-  // Keep a reference if we need to revert on failure
-  const originalText = uploadBtn.innerText;
-
-  // ONE unified, poetic loading message for the entire process
-  uploadBtn.innerText = "Catching the light...";
+  uploadBtn.innerText = "Uploading...";
   uploadBtn.disabled = true;
 
-  // --- 1. TIME TRAVEL (EXIF EXTRACTION) ---
-  // Do this BEFORE HEIC conversion, because conversion strips the metadata!
+  // EXIF EXTRACTION
   let finalLat = currentUserLat;
   let finalLon = currentUserLon;
-  let finalTime = new Date().toISOString(); // Default to right now
+  let finalTime = new Date().toISOString();
 
   try {
-    // Parse the image for GPS and Time tags
-    const exifData = await exifr.parse(file);
-    if (exifData) {
-      if (exifData.latitude && exifData.longitude) {
-        finalLat = exifData.latitude;
-        finalLon = exifData.longitude;
-        console.log("Time Travel: Found original GPS coordinates!");
-      }
-      if (exifData.DateTimeOriginal) {
-        finalTime = exifData.DateTimeOriginal.toISOString();
-        console.log("Time Travel: Found original capture time!");
+    if (typeof exifr !== "undefined") {
+      const exifData = await exifr.parse(file);
+      if (exifData) {
+        if (exifData.latitude && exifData.longitude) {
+          finalLat = exifData.latitude;
+          finalLon = exifData.longitude;
+        }
+        if (exifData.DateTimeOriginal) {
+          finalTime = exifData.DateTimeOriginal.toISOString();
+        }
       }
     }
   } catch (error) {
     console.log("No EXIF data found, relying on live location and time.");
   }
 
-  // --- 2. HEIC CONVERTER (Lazy Loaded) ---
-  const fileName = file.name.toLowerCase();
-  const isAppleFormat =
-    fileName.endsWith(".heic") ||
-    fileName.endsWith(".heif") ||
-    file.type === "image/heic" ||
-    file.type === "image/heif";
-
-  if (isAppleFormat) {
-    try {
-      await loadHeicLibrary();
-
-      let conversionResult = await heic2any({
-        blob: file,
-        toType: "image/jpeg",
-        quality: 0.8,
-      });
-
-      const finalBlob = Array.isArray(conversionResult)
-        ? conversionResult[0]
-        : conversionResult;
-
-      // Use a Regex to replace either .heic or .heif with .jpg
-      file = new File([finalBlob], file.name.replace(/\.hei[cf]/i, ".jpg"), {
-        type: "image/jpeg",
-      });
-    } catch (e) {
-      console.error("Apple Image Conversion Error:", e);
-      showToast("Could not process Apple image.", true);
-      uploadBtn.innerText = "Capture";
-      uploadBtn.disabled = false;
-      fileInputCamera.value = "";
-      fileInputGallery.value = "";
-      return;
-    }
-  }
-
-  // --- 3. EXECUTE UPLOAD ---
+  // EXECUTE UPLOAD
   const formData = new FormData();
   formData.append("image", file);
-
-  // Send the extracted (or live) data to the backend
   formData.append("lat", finalLat);
   formData.append("lon", finalLon);
   formData.append("captured_at", finalTime);
@@ -296,25 +313,58 @@ const handleFileSelection = async (event) => {
   formData.append("capture_type", selectedType);
 
   try {
-    const response = await fetch(`${API_BASE}/upload`, {
-      method: "POST",
-      body: formData,
+    const response = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${API_BASE}/upload`);
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 100);
+
+          uploadBtn.innerText = `Uploading... ${percent}%`;
+          uploadBtn.style.setProperty(
+            "background",
+            `linear-gradient(to right, #ff5e3a ${percent}%, rgba(255, 255, 255, 0.3) ${percent}%)`,
+            "important",
+          );
+          uploadBtn.style.setProperty(
+            "border-color",
+            "transparent",
+            "important",
+          );
+          uploadBtn.style.setProperty("color", "white", "important");
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(JSON.parse(xhr.responseText));
+        } else {
+          try {
+            reject(JSON.parse(xhr.responseText));
+          } catch (e) {
+            reject({ error: "Server error" });
+          }
+        }
+      };
+
+      xhr.onerror = () => reject({ error: "Network disconnected" });
+      xhr.send(formData);
     });
 
-    if (response.ok) {
-      await fetchAllPins();
-      const successWord =
-        selectedType === "moon" ? "Night sky" : "Evening";
-      showToast(`${successWord} archived successfully.`);
-    } else {
-      const errorData = await response.json();
-      showToast("Upload failed: " + (errorData.error || "Unknown error"), true);
-    }
-  } catch (error) {
-    showToast("Network error while uploading.", true);
+    await fetchAllPins();
+    const successWord = selectedType === "moon" ? "Night sky" : "Evening";
+    showToast(`${successWord} archived successfully.`);
+  } catch (errorData) {
+    showToast("Upload failed: " + (errorData.error || "Unknown error"), true);
   } finally {
-    uploadBtn.innerText = "Capture";
+    uploadBtn.style.removeProperty("background");
+    uploadBtn.style.removeProperty("border-color");
+    uploadBtn.style.removeProperty("color");
+
+    uploadBtn.innerText = `Capture`;
     uploadBtn.disabled = false;
+
     fileInputCamera.value = "";
     fileInputGallery.value = "";
   }
@@ -325,6 +375,9 @@ fileInputCamera.addEventListener("change", handleFileSelection);
 
 // --- 5. GALLERY VIEW LOGIC ---
 async function openGallery(pinId) {
+  // Push state to history before opening
+  history.pushState({ modal: "gallery" }, "");
+
   galleryModal.classList.add("show-modal");
   galleryContent.innerHTML = "";
   galleryLoading.style.display = "flex";
@@ -363,6 +416,7 @@ async function openGallery(pinId) {
       imgElement.src = img.file_path;
       imgElement.className = "gallery-img";
       imgElement.loading = "lazy";
+      imgElement.decoding = "async";
 
       const dateElement = document.createElement("div");
       dateElement.className = "image-date";
@@ -393,21 +447,30 @@ async function openGallery(pinId) {
   }
 }
 
+closeBtn.addEventListener("click", () => {
+  // Triggers popstate to close gallery
+  history.back();
+});
+
 // --- 6. LIGHTBOX & SWIPE LOGIC ---
 function openLightbox(index) {
   currentImageIndex = index;
   updateLightboxView();
+
+  // Push state to history before opening
+  history.pushState({ modal: "lightbox" }, "");
   lightboxModal.classList.add("show");
 }
 
 function closeLightbox() {
-  lightboxModal.classList.remove("show");
+  // Triggers popstate to close lightbox
+  history.back();
 }
 
 function updateLightboxView(direction = "none") {
   const img = currentGalleryImages[currentImageIndex];
 
-  lightboxImg.style.opacity = "0";
+  lightboxModal.style.opacity = "0";
   if (direction === "next")
     lightboxImg.style.transform = "translateX(-30px) scale(0.95)";
   else if (direction === "prev")
@@ -430,7 +493,7 @@ function updateLightboxView(direction = "none") {
     lightboxDate.innerText = localDate;
 
     lightboxImg.onload = () => {
-      lightboxImg.style.opacity = "1";
+      lightboxModal.style.opacity = "1";
       lightboxImg.style.transform = "translateX(0) scale(1)";
     };
   }, 200);
@@ -484,31 +547,13 @@ function handleSwipe() {
   }
 }
 
-closeBtn.addEventListener("click", () => {
-  galleryModal.classList.remove("show-modal");
-  setTimeout(() => {
-    galleryContent.innerHTML = "";
-  }, 400);
-});
-
 // --- 7. ABOUT DRAWER LOGIC ---
 aboutBtn.addEventListener("click", () => {
+  // Push state to history before opening
+  history.pushState({ modal: "about" }, "");
   aboutDrawer.classList.add("show");
   drawerOverlay.classList.add("show");
 });
-
-drawerOverlay.addEventListener("click", () => {
-  aboutDrawer.classList.remove("show");
-  uploadSheet.classList.remove("show");
-  drawerOverlay.classList.remove("show");
-});
-
-document
-  .querySelector("#about-drawer .drawer-handle")
-  .addEventListener("click", () => {
-    aboutDrawer.classList.remove("show");
-    drawerOverlay.classList.remove("show");
-  });
 
 // --- 8. SYSTEM-WIDE DARK MODE TOGGLE LOGIC ---
 function initThemeLogic() {

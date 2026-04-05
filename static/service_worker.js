@@ -124,8 +124,9 @@ self.addEventListener("fetch", (event) => {
           throw err;
         });
 
-      // 3. INSTANTLY return the cached version if we have it, 
+      // 3. INSTANTLY return the cached version if we have it,
       // otherwise wait for the network to finish.
       return cachedResponse || fetchPromise;
-    })
+    }),
   );
+});
