@@ -162,7 +162,6 @@ async function fetchAllPins() {
         iconAnchor: [10, 10],
       });
 
-    
       // Add a microscopic random offset (about 5-10 meters) to the coordinates.
       // This ensures pins at the exact same location slightly separate when zoomed in!
       const jitterLat = parseFloat(pin.lat) + (Math.random() - 0.5) * 0.00015;
@@ -241,8 +240,17 @@ uploadBtn.addEventListener("click", () => {
 });
 
 // --- 3. ACTION SHEET ROUTING & CLOSING ---
-btnCamera.addEventListener("click", () => fileInputCamera.click());
-btnGallery.addEventListener("click", () => fileInputGallery.click());
+let uploadSource = ""; // NEW: Track where the photo came from
+
+btnCamera.addEventListener("click", () => {
+  uploadSource = "camera";
+  fileInputCamera.click();
+});
+
+btnGallery.addEventListener("click", () => {
+  uploadSource = "gallery";
+  fileInputGallery.click();
+});
 
 // Triggers the popstate event to elegantly close the drawer
 uploadHandle.addEventListener("click", () => {
@@ -268,15 +276,22 @@ document
 // --- 4. MASTER FILE HANDLING ---
 const handleFileSelection = async (event) => {
   let file = event.target.files[0];
-  if (!file) return;
+  if (!file) {
+    showToast("No photo detected. Please try again.");
+    return;
+  }
 
   // Elegantly close the drawer by stepping back in history
   if (uploadSheet.classList.contains("show")) {
     history.back();
   }
 
-  uploadBtn.innerText = "Uploading...";
+  uploadBtn.innerText = "Preparing upload...";
   uploadBtn.disabled = true;
+
+  // Give the mobile browser a tiny 50ms pause to paint the UI
+  // before we slam the processor with a massive file
+  await new Promise((resolve) => setTimeout(resolve, 50));
 
   // EXIF EXTRACTION
   let finalLat = currentUserLat;
@@ -284,17 +299,22 @@ const handleFileSelection = async (event) => {
   let finalTime = new Date().toISOString();
 
   try {
-    if (typeof exifr !== "undefined") {
+    // THE FIX: ONLY parse EXIF if it came from the gallery!
+    // Live camera photos strip GPS anyway, so skip it to prevent phone RAM crashes.
+    if (uploadSource === "gallery" && typeof exifr !== "undefined") {
       const exifData = await exifr.parse(file);
       if (exifData) {
         if (exifData.latitude && exifData.longitude) {
           finalLat = exifData.latitude;
           finalLon = exifData.longitude;
+          console.log("Time Travel: Found original GPS coordinates!");
         }
         if (exifData.DateTimeOriginal) {
           finalTime = exifData.DateTimeOriginal.toISOString();
         }
       }
+    } else {
+      console.log("Live camera photo detected. Skipping EXIF to save memory.");
     }
   } catch (error) {
     console.log("No EXIF data found, relying on live location and time.");
@@ -365,8 +385,10 @@ const handleFileSelection = async (event) => {
     uploadBtn.innerText = `Capture`;
     uploadBtn.disabled = false;
 
+    // Reset the inputs so the browser allows the same photo to be chosen twice if needed
     fileInputCamera.value = "";
     fileInputGallery.value = "";
+    uploadSource = ""; // Reset source tracker
   }
 };
 
