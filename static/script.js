@@ -200,44 +200,50 @@ uploadBtn.addEventListener("click", () => {
     showToast("Weak signal detected. Uploads may take a while.");
   }
 
-  // If we ALREADY have their location, trigger the drawer AND push history state
-  if (currentUserLat && currentUserLon) {
-    history.pushState({ modal: "upload" }, "");
-    uploadSheet.classList.add("show");
-    drawerOverlay.classList.add("show");
-    return;
-  }
+  // THE FIX: Give the phone 150 milliseconds to paint the physical 
+  // orange button press before we instantly shift the app's state!
+  setTimeout(() => {
+    
+    // If we ALREADY have their location, trigger the drawer AND push history state
+    if (currentUserLat && currentUserLon) {
+      history.pushState({ modal: "upload" }, "");
+      uploadSheet.classList.add("show");
+      drawerOverlay.classList.add("show");
+      return;
+    }
 
-  if (navigator.geolocation) {
-    uploadBtn.innerText = "Locating...";
-    uploadBtn.disabled = true;
+    if (navigator.geolocation) {
+      uploadBtn.innerText = "Locating...";
+      uploadBtn.disabled = true;
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        currentUserLat = position.coords.latitude;
-        currentUserLon = position.coords.longitude;
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          currentUserLat = position.coords.latitude;
+          currentUserLon = position.coords.longitude;
 
-        map.setView([currentUserLat, currentUserLon], 15);
-        showToast("Live at your location");
+          map.setView([currentUserLat, currentUserLon], 15);
+          showToast("Live at your location");
 
-        uploadBtn.innerText = "Select Photo";
-        uploadBtn.disabled = false;
-      },
-      (error) => {
-        console.error("Geolocation error:", error);
-        showToast("Location is required.", true);
-        uploadBtn.innerText = "Share Location to Upload";
-        uploadBtn.disabled = false;
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 60000,
-        maximumAge: 0,
-      },
-    );
-  } else {
-    showToast("Location not supported by browser.", true);
-  }
+          uploadBtn.innerText = "Select Photo";
+          uploadBtn.disabled = false;
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          showToast("Location is required.", true);
+          uploadBtn.innerText = "Share Location to Upload";
+          uploadBtn.disabled = false;
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 60000,
+          maximumAge: 0,
+        },
+      );
+    } else {
+      showToast("Location not supported by browser.", true);
+    }
+    
+  }, 150); // 150ms delay for the perfect visual click
 });
 
 // --- 3. ACTION SHEET ROUTING & CLOSING ---
