@@ -449,6 +449,7 @@ async function openGallery(pinId) {
         ? safeDateString
         : safeDateString + "Z";
       const localDate = new Date(utcString).toLocaleString(undefined, {
+        year: "numeric",
         month: "short",
         day: "numeric",
         hour: "2-digit",
@@ -508,6 +509,7 @@ function updateLightboxView(direction = "none") {
       ? safeDateString
       : safeDateString + "Z";
     const localDate = new Date(utcString).toLocaleString(undefined, {
+      year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
@@ -632,7 +634,6 @@ function initThemeLogic() {
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
     
-    // Do not refresh the map if they are in the middle of uploading!
     // This prevents the map from flashing and interrupting the camera return.
     if (uploadBtn.innerText === "Capture" && !uploadSheet.classList.contains("show")) {
       console.log("App woke up naturally. Refreshing the sky...");

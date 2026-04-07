@@ -378,14 +378,28 @@ body.dark-mode .image-date {
     touch-action: none;
 }
 
+/* --- THE LIGHTBOX DATE PILL --- */
 .lightbox-date {
     margin-top: 20px;
-    color: #ffffff;
-    font-size: 1.1rem;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    color: #333;
+    padding: 8px 18px;
+    border-radius: 25px;
+    font-size: 0.95rem;
     font-weight: 600;
-    letter-spacing: 1px;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     z-index: 3100;
+    transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+body.dark-mode .lightbox-date {
+    background: rgba(0, 0, 0, 0.6);
+    color: #e0e0e0;
+    border-color: rgba(255, 255, 255, 0.15);
 }
 
 .lightbox.show {
