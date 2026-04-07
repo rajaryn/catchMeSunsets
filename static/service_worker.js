@@ -1,4 +1,4 @@
-const CACHE_NAME = "vesper-cache-v8";
+const CACHE_NAME = "vesper-cache-v9"; // BUMPED TO V9: This forces the browser to pull your new CSS!
 
 // Notice we no longer ask the server for offline.html during install
 const ASSETS_TO_CACHE = [
@@ -118,10 +118,10 @@ self.addEventListener("fetch", (event) => {
           return networkResponse;
         })
         .catch((err) => {
-          console.log("Network fetch failed:", err);
-          // THE FIX: We must throw the error so the browser knows the file failed to load,
-          // rather than silently returning 'undefined' and crashing the Service Worker.
-          throw err;
+          console.warn("Background fetch failed (user may be offline):", err);
+          // THE FIX: Return a generic empty response instead of throwing an error.
+          // This prevents the "Uncaught Promise TypeError" and lets the app keep running smoothly.
+          return new Response("", { status: 503, statusText: "Offline" });
         });
 
       // 3. INSTANTLY return the cached version if we have it,
