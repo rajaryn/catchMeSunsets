@@ -1,4 +1,4 @@
-const CACHE_NAME = "vesper-cache-v9"; // BUMPED TO V9: This forces the browser to pull your new CSS!
+const CACHE_NAME = "vesper-cache-v10"; // BUMPED TO V10: This forces the browser to pull your new CSS!
 
 // Notice we no longer ask the server for offline.html during install
 const ASSETS_TO_CACHE = [

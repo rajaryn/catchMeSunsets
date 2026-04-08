@@ -845,16 +845,18 @@ body.dark-mode .leaflet-control-zoom-out {
 
     /* 7. Balance the Top Pills on Mobile */
     .brand-pill {
-        left: 20px;
-        /* Push to the left edge */
-        transform: none !important;
-        /* Remove the center alignment */
-    }
-
-    /* Stop the button from trying to center itself when clicked on mobile */
+            left: 20px;
+            /* Push to the left edge */
+            transform: none !important;
+            /* Remove the center alignment */
+        }
+    
+    /* THE ULTIMATE FIX: Aggressively block desktop hover/focus bleed on mobile */
+    .brand-pill:hover,
+    .brand-pill:focus,
     .brand-pill:active {
-        transform: scale(1.05) !important;
-    }
+            transform: scale(1.05) !important;
+        }
 
     /* 8. THE NEW UX: Slide Toasts from Bottom on Mobile */
     .toast {
