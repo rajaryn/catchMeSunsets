@@ -4,6 +4,9 @@ let markersLayer;
 let currentUserLat = null;
 let currentUserLon = null;
 
+// Search Variables
+let globalSearchTimeout = null;
+
 // State for the Lightbox Carousel
 let currentGalleryImages = [];
 let currentImageIndex = 0;
@@ -21,22 +24,36 @@ const btnCamera = document.getElementById("btn-camera");
 const btnGallery = document.getElementById("btn-gallery");
 const uploadHandle = document.getElementById("upload-handle");
 
+// Search & Side Menu DOM Elements
+const brandToggle = document.getElementById("brand-toggle");
+const sideMenu = document.getElementById("side-menu");
+const globalSearchInput = document.getElementById("global-search-input");
+const globalSearchResults = document.getElementById("global-search-results");
+
 const galleryModal = document.getElementById("gallery-modal");
 const galleryContent = document.getElementById("gallery-content");
 const closeBtn = document.getElementById("close-btn");
 const galleryLoading = document.getElementById("gallery-loading");
-const toast = document.getElementById("toast");
-const aboutBtn = document.getElementById("about-btn");
-const aboutDrawer = document.getElementById("about-drawer");
 const drawerOverlay = document.getElementById("drawer-overlay");
 
-// --- Toast Logic ---
+// --- Toast Logic (With Native SVGs) ---
 function showToast(message, isError = false) {
-  toast.innerText = message;
-  toast.classList.add("show");
+  const toastEl = document.getElementById("toast");
+  const toastMsg = document.getElementById("toast-message");
+  const toastIcon = document.querySelector(".toast-icon");
 
-  setTimeout(() => {
-    toast.classList.remove("show");
+  const successSvg = `<svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
+  const errorSvg = `<svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+
+  toastMsg.innerText = message;
+  toastIcon.innerHTML = isError ? errorSvg : successSvg;
+  toastIcon.style.color = isError ? "#ff4444" : "inherit";
+
+  toastEl.classList.add("show");
+
+  clearTimeout(toastEl.hideTimeout);
+  toastEl.hideTimeout = setTimeout(() => {
+    toastEl.classList.remove("show");
   }, 3000);
 }
 
@@ -53,33 +70,25 @@ function isNetworkSlow() {
 
 // --- PWA HARDWARE BACK BUTTON LOGIC ---
 window.addEventListener("popstate", (e) => {
-  // Check what state the phone's history just went back to
   const state = e.state ? e.state.modal : null;
 
-  // 1. Lightbox Layer
-  if (state !== "lightbox") {
-    lightboxModal.classList.remove("show");
-  }
-  // 2. Gallery Layer
+  if (state !== "lightbox") lightboxModal.classList.remove("show");
+
   if (state !== "gallery" && state !== "lightbox") {
     galleryModal.classList.remove("show-modal");
-    // Delay clearing content so the fade-out animation is smooth
     setTimeout(() => {
       if (!galleryModal.classList.contains("show-modal")) {
         galleryContent.innerHTML = "";
       }
     }, 400);
   }
-  // 3. Upload Drawer Layer
-  if (state !== "upload") {
-    uploadSheet.classList.remove("show");
-  }
-  // 4. About Drawer Layer
-  if (state !== "about") {
-    aboutDrawer.classList.remove("show");
-  }
-  // 5. Global Overlay (Close if neither drawer is active)
-  if (state !== "upload" && state !== "about") {
+
+  if (state !== "upload") uploadSheet.classList.remove("show");
+
+  if (
+    state !== "upload" &&
+    (!sideMenu || !sideMenu.classList.contains("show"))
+  ) {
     drawerOverlay.classList.remove("show");
   }
 });
@@ -94,7 +103,10 @@ function initApp() {
     maxBounds: bounds,
     maxBoundsViscosity: 1.0,
     minZoom: 2,
+    zoomControl: false,
   });
+
+  L.control.zoom({ position: "bottomright" }).addTo(map);
 
   L.tileLayer(
     "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
@@ -103,7 +115,7 @@ function initApp() {
       maxZoom: 20,
       keepBuffer: 8,
       updateWhenIdle: true,
-      detectRetina: false
+      detectRetina: false,
     },
   ).addTo(map);
 
@@ -114,12 +126,7 @@ function initApp() {
     })
     .then((data) => {
       L.geoJSON(data, {
-        style: {
-          color: "#a3a3a3",
-          weight: 1,
-          opacity: 0.8,
-          fillOpacity: 0,
-        },
+        style: { color: "#a3a3a3", weight: 1, opacity: 0.8, fillOpacity: 0 },
         interactive: false,
       }).addTo(map);
     })
@@ -127,6 +134,24 @@ function initApp() {
 
   markersLayer = L.layerGroup().addTo(map);
   fetchAllPins();
+
+  // Start silently fetching GPS on load so it's ready when they need it
+  fetchSilentGPS();
+}
+
+function fetchSilentGPS() {
+  if (navigator.geolocation && !currentUserLat) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        currentUserLat = position.coords.latitude;
+        currentUserLon = position.coords.longitude;
+      },
+      () => {
+        console.log("Silent GPS fetch denied or failed.");
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    );
+  }
 }
 
 async function fetchAllPins() {
@@ -148,14 +173,10 @@ async function fetchAllPins() {
           (pin.last_upload_at.endsWith("Z") ? "" : "Z");
         const uploadDate = new Date(safeDateStr);
         const uploadDateString = `${uploadDate.getFullYear()}-${String(uploadDate.getMonth() + 1).padStart(2, "0")}-${String(uploadDate.getDate()).padStart(2, "0")}`;
-
-        if (uploadDateString === todayString) {
-          isToday = true;
-        }
+        if (uploadDateString === todayString) isToday = true;
       }
 
       const pinClass = isToday ? "today-pin" : "premium-pin";
-
       const dynamicIcon = L.divIcon({
         className: "sunset-wrapper",
         html: `<div class="${pinClass}"></div>`,
@@ -163,26 +184,19 @@ async function fetchAllPins() {
         iconAnchor: [10, 10],
       });
 
-      // Add a microscopic random offset (about 5-10 meters) to the coordinates.
-      // This ensures pins at the exact same location slightly separate when zoomed in!
-      const jitterLat = parseFloat(pin.lat) + (Math.random() - 0.5) * 0.00015;
-      const jitterLon = parseFloat(pin.lon) + (Math.random() - 0.5) * 0.00015;
+      const marker = L.marker([parseFloat(pin.lat), parseFloat(pin.lon)], {
+        icon: dynamicIcon,
+      });
 
-      const marker = L.marker([jitterLat, jitterLon], { icon: dynamicIcon });
-
-      // --- THE FLY-TO FIX ---
       marker.on("click", () => {
         const currentZoom = map.getZoom();
-        const streetLevelZoom = 18; // Close enough to see the jitter separation
-
+        const streetLevelZoom = 18;
         if (currentZoom < streetLevelZoom) {
-          // If zoomed out, fly down to the cluster smoothly
-          map.flyTo([jitterLat, jitterLon], streetLevelZoom, {
-            duration: 0.8, // 0.8 seconds for a cinematic swoop
+          map.flyTo([pin.lat, pin.lon], streetLevelZoom, {
+            duration: 0.8,
             easeLinearity: 0.25,
           });
         } else {
-          // If already zoomed in, trigger the gallery!
           openGallery(pin.id);
         }
       });
@@ -194,160 +208,160 @@ async function fetchAllPins() {
   }
 }
 
-// --- 2. MAIN UPLOAD BUTTON CLICK ---
-uploadBtn.addEventListener("click", () => {
-  if (isNetworkSlow()) {
-    showToast("Weak signal detected. Uploads may take a while.");
-  }
+// --- 2. BRAND MENU LOGIC (SIDE DRAWER) ---
+if (brandToggle && sideMenu) {
+  const searchContainer = document.querySelector(".glass-search-container");
 
-  // THE FIX: Give the phone 150 milliseconds to paint the physical 
-  // orange button press before we instantly shift the app's state!
-  setTimeout(() => {
-    
-    // If we ALREADY have their location, trigger the drawer AND push history state
-    if (currentUserLat && currentUserLon) {
-      history.pushState({ modal: "upload" }, "");
-      uploadSheet.classList.add("show");
-      drawerOverlay.classList.add("show");
-      return;
-    }
+  brandToggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = sideMenu.classList.contains("show");
 
-    if (navigator.geolocation) {
-      uploadBtn.innerText = "Locating...";
-      uploadBtn.disabled = true;
+    if (isOpen) {
+      sideMenu.classList.remove("show");
+      brandToggle.classList.remove("open");
+      drawerOverlay.classList.remove("show");
 
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          currentUserLat = position.coords.latitude;
-          currentUserLon = position.coords.longitude;
-
-          map.setView([currentUserLat, currentUserLon], 15);
-          showToast("Live at your location");
-
-          uploadBtn.innerText = "Select Photo";
-          uploadBtn.disabled = false;
-        },
-        (error) => {
-          console.error("Geolocation error:", error);
-          showToast("Location is required.", true);
-          uploadBtn.innerText = "Share Location to Upload";
-          uploadBtn.disabled = false;
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 60000,
-          maximumAge: 0,
-        },
-      );
+      if (searchContainer) {
+        searchContainer.style.opacity = "1";
+        searchContainer.style.pointerEvents = "auto";
+      }
     } else {
-      showToast("Location not supported by browser.", true);
+      sideMenu.classList.add("show");
+      brandToggle.classList.add("open");
+      drawerOverlay.classList.add("show");
+
+      if (searchContainer) {
+        searchContainer.style.opacity = "0";
+        searchContainer.style.pointerEvents = "none";
+      }
     }
-    
-  }, 150); // 150ms delay for the perfect visual click
+  });
+
+  drawerOverlay.addEventListener("click", () => {
+    if (sideMenu.classList.contains("show")) {
+      sideMenu.classList.remove("show");
+      brandToggle.classList.remove("open");
+      drawerOverlay.classList.remove("show");
+
+      if (searchContainer) {
+        searchContainer.style.opacity = "1";
+        searchContainer.style.pointerEvents = "auto";
+      }
+    }
+  });
+}
+
+// --- 3. INSTANT UPLOAD DRAWER LOGIC ---
+uploadBtn.addEventListener("click", () => {
+  if (isNetworkSlow())
+    showToast("Weak signal detected. Uploads may take a while.");
+
+  // Open instantly (No more waiting for GPS!)
+  history.pushState({ modal: "upload" }, "");
+  uploadSheet.classList.add("show");
+  drawerOverlay.classList.add("show");
+
+  // Trigger a background GPS fetch just in case they haven't gotten one yet
+  fetchSilentGPS();
 });
 
-// --- 3. ACTION SHEET ROUTING & CLOSING ---
-let uploadSource = ""; // NEW: Track where the photo came from
+// --- 4. ACTION SHEET ROUTING & CLOSING ---
+let uploadSource = "";
 
 btnCamera.addEventListener("click", () => {
   uploadSource = "camera";
   fileInputCamera.click();
 });
-
 btnGallery.addEventListener("click", () => {
   uploadSource = "gallery";
   fileInputGallery.click();
 });
-
-// Triggers the popstate event to elegantly close the drawer
 uploadHandle.addEventListener("click", () => {
   history.back();
 });
-
-// Triggers the popstate event to elegantly close any open drawer
 drawerOverlay.addEventListener("click", () => {
-  if (
-    uploadSheet.classList.contains("show") ||
-    aboutDrawer.classList.contains("show")
-  ) {
-    history.back();
-  }
+  if (uploadSheet.classList.contains("show")) history.back();
 });
 
-document
-  .querySelector("#about-drawer .drawer-handle")
-  .addEventListener("click", () => {
-    history.back();
-  });
-
-// --- 4. MASTER FILE HANDLING ---
+// --- 5. MASTER FILE HANDLING (THE BRAIN) ---
 const handleFileSelection = async (event) => {
   let file = event.target.files[0];
   if (!file) {
-    showToast("No photo detected. Please try again.");
+    showToast("No photo detected. Please try again.", true);
     return;
   }
 
-  // Elegantly close the drawer by stepping back in history
-  if (uploadSheet.classList.contains("show")) {
-    history.back();
-  }
+  // Close the drawer immediately
+  if (uploadSheet.classList.contains("show")) history.back();
 
   uploadBtn.innerText = "Preparing upload...";
   uploadBtn.disabled = true;
-
-  // Give the mobile browser a tiny 50ms pause to paint the UI
-  // before we slam the processor with a massive file
   await new Promise((resolve) => setTimeout(resolve, 50));
 
-  // EXIF EXTRACTION
-  let finalLat = currentUserLat;
-  let finalLon = currentUserLon;
+  let finalLat = null;
+  let finalLon = null;
   let finalTime = new Date().toISOString();
 
+  // STEP 1: Attempt EXIF extraction (Gallery Only)
   try {
-    // THE FIX: ONLY parse EXIF if it came from the gallery!
-    // Live camera photos strip GPS anyway, so skip it to prevent phone RAM crashes.
     if (uploadSource === "gallery" && typeof exifr !== "undefined") {
       const exifData = await exifr.parse(file);
       if (exifData) {
         if (exifData.latitude && exifData.longitude) {
           finalLat = exifData.latitude;
           finalLon = exifData.longitude;
-          console.log("Time Travel: Found original GPS coordinates!");
         }
         if (exifData.DateTimeOriginal) {
           finalTime = exifData.DateTimeOriginal.toISOString();
         }
       }
-    } else {
-      console.log("Live camera photo detected. Skipping EXIF to save memory.");
     }
   } catch (error) {
-    console.log("No EXIF data found, relying on live location and time.");
+    console.log("No EXIF data found.");
   }
 
-  // EXECUTE UPLOAD
+  // STEP 2: Fallback Logic if EXIF failed (or if it's a Live Camera shot)
+  if (finalLat === null || finalLon === null) {
+    if (uploadSource === "camera") {
+      // Camera MUST use live GPS
+      if (currentUserLat && currentUserLon) {
+        finalLat = currentUserLat;
+        finalLon = currentUserLon;
+      } else {
+        showToast("Live location required for camera captures.", true);
+        uploadBtn.innerText = `Capture`;
+        uploadBtn.disabled = false;
+        fileInputCamera.value = "";
+        return; // Abort the upload
+      }
+    } else if (uploadSource === "gallery") {
+      // Gallery with NO EXIF: Use the center of the map!
+      const mapCenter = map.getCenter();
+      finalLat = mapCenter.lat;
+      finalLon = mapCenter.lng;
+      showToast("No GPS found in photo. Using current map location.");
+    }
+  }
+
+  // Final Data Assembly
   const formData = new FormData();
   formData.append("image", file);
   formData.append("lat", finalLat);
   formData.append("lon", finalLon);
   formData.append("captured_at", finalTime);
-
   const selectedType =
     document.querySelector('input[name="capture_type"]:checked')?.value ||
     "sun";
   formData.append("capture_type", selectedType);
 
+  // STEP 3: Execute Upload
   try {
     const response = await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", `${API_BASE}/upload`);
-
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable) {
           const percent = Math.round((event.loaded / event.total) * 100);
-
           uploadBtn.innerText = `Uploading... ${percent}%`;
           uploadBtn.style.setProperty(
             "background",
@@ -362,51 +376,44 @@ const handleFileSelection = async (event) => {
           uploadBtn.style.setProperty("color", "white", "important");
         }
       };
-
       xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
+        if (xhr.status >= 200 && xhr.status < 300)
           resolve(JSON.parse(xhr.responseText));
-        } else {
-          try {
-            reject(JSON.parse(xhr.responseText));
-          } catch (e) {
-            reject({ error: "Server error" });
-          }
-        }
+        else reject({ error: "Server error" });
       };
-
       xhr.onerror = () => reject({ error: "Network disconnected" });
       xhr.send(formData);
     });
 
     await fetchAllPins();
-    const successWord = selectedType === "moon" ? "Night sky" : "Evening";
-    showToast(`${successWord} archived successfully.`);
+    map.flyTo([finalLat, finalLon], 16, {
+      animate: true,
+      duration: 1.5,
+      easeLinearity: 0.25,
+    });
+    showToast(
+      `${selectedType === "moon" ? "Night sky" : "Evening"} archived successfully.`,
+    );
   } catch (errorData) {
-    showToast("Upload failed: " + (errorData.error || "Unknown error"), true);
+    showToast("Upload failed.", true);
   } finally {
     uploadBtn.style.removeProperty("background");
     uploadBtn.style.removeProperty("border-color");
     uploadBtn.style.removeProperty("color");
-
     uploadBtn.innerText = `Capture`;
     uploadBtn.disabled = false;
-
-    // Reset the inputs so the browser allows the same photo to be chosen twice if needed
     fileInputCamera.value = "";
     fileInputGallery.value = "";
-    uploadSource = ""; // Reset source tracker
+    uploadSource = "";
   }
 };
 
 fileInputGallery.addEventListener("change", handleFileSelection);
 fileInputCamera.addEventListener("change", handleFileSelection);
 
-// --- 5. GALLERY VIEW LOGIC ---
+// --- 6. GALLERY VIEW & LIGHTBOX LOGIC ---
 async function openGallery(pinId) {
-  // Push state to history before opening
   history.pushState({ modal: "gallery" }, "");
-
   galleryModal.classList.add("show-modal");
   galleryContent.innerHTML = "";
   galleryLoading.style.display = "flex";
@@ -417,8 +424,8 @@ async function openGallery(pinId) {
   try {
     const response = await fetch(`${API_BASE}/pins/${pinId}`);
     if (!response.ok) throw new Error("Failed to fetch gallery");
-
     const images = await response.json();
+
     galleryLoading.classList.add("fade-out");
     setTimeout(() => {
       galleryLoading.style.display = "none";
@@ -445,16 +452,14 @@ async function openGallery(pinId) {
       imgElement.src = img.file_path;
       imgElement.className = "gallery-img";
       imgElement.loading = "lazy";
-      imgElement.decoding = "async";
 
       const dateElement = document.createElement("div");
       dateElement.className = "image-date";
-
       const safeDateString = img.uploaded_at.replace(" ", "T");
       const utcString = safeDateString.endsWith("Z")
         ? safeDateString
         : safeDateString + "Z";
-      const localDate = new Date(utcString).toLocaleString(undefined, {
+      dateElement.innerText = new Date(utcString).toLocaleString(undefined, {
         year: "numeric",
         month: "short",
         day: "numeric",
@@ -462,45 +467,35 @@ async function openGallery(pinId) {
         minute: "2-digit",
       });
 
-      dateElement.innerText = localDate;
-
       card.appendChild(imgElement);
       card.appendChild(typeBadge);
       card.appendChild(dateElement);
       galleryContent.appendChild(card);
     });
   } catch (error) {
-    console.error("Gallery Error:", error);
     galleryLoading.classList.remove("fade-out");
     galleryLoading.style.display = "flex";
-    galleryLoading.innerHTML = `<p style="color:#ff5e3a; text-align:center;">Failed to catch the view.<br>Check your connection.</p>`;
+    galleryLoading.innerHTML = `<p style="color:#ff5e3a; text-align:center;">Failed to catch the view.</p>`;
   }
 }
 
-closeBtn.addEventListener("click", () => {
-  // Triggers popstate to close gallery
-  history.back();
-});
+closeBtn.addEventListener("click", () => history.back());
 
-// --- 6. LIGHTBOX & SWIPE LOGIC ---
 function openLightbox(index) {
   currentImageIndex = index;
   updateLightboxView();
-
-  // Push state to history before opening
   history.pushState({ modal: "lightbox" }, "");
   lightboxModal.classList.add("show");
 }
 
 function closeLightbox() {
-  // Triggers popstate to close lightbox
   history.back();
 }
 
 function updateLightboxView(direction = "none") {
   const img = currentGalleryImages[currentImageIndex];
-
   lightboxModal.style.opacity = "0";
+
   if (direction === "next")
     lightboxImg.style.transform = "translateX(-30px) scale(0.95)";
   else if (direction === "prev")
@@ -509,19 +504,17 @@ function updateLightboxView(direction = "none") {
 
   setTimeout(() => {
     lightboxImg.src = img.file_path;
-
     const safeDateString = img.uploaded_at.replace(" ", "T");
     const utcString = safeDateString.endsWith("Z")
       ? safeDateString
       : safeDateString + "Z";
-    const localDate = new Date(utcString).toLocaleString(undefined, {
+    lightboxDate.innerText = new Date(utcString).toLocaleString(undefined, {
       year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     });
-    lightboxDate.innerText = localDate;
 
     lightboxImg.onload = () => {
       lightboxModal.style.opacity = "1";
@@ -549,7 +542,6 @@ lightboxModal.addEventListener("click", (e) => {
 
 let touchStartX = 0;
 let touchEndX = 0;
-
 lightboxModal.addEventListener(
   "touchstart",
   (e) => {
@@ -557,55 +549,36 @@ lightboxModal.addEventListener(
   },
   false,
 );
-
 lightboxModal.addEventListener(
   "touchend",
   (e) => {
     touchEndX = e.changedTouches[0].screenX;
-    handleSwipe();
+    if (touchStartX - touchEndX > 40) nextImage();
+    else if (touchStartX - touchEndX < -40) prevImage();
   },
   false,
 );
 
-function handleSwipe() {
-  const swipeThreshold = 40;
-  const swipeDistance = touchStartX - touchEndX;
-
-  if (swipeDistance > swipeThreshold) {
-    nextImage();
-  } else if (swipeDistance < -swipeThreshold) {
-    prevImage();
-  }
-}
-
-// --- 7. ABOUT DRAWER LOGIC ---
-aboutBtn.addEventListener("click", () => {
-  // Push state to history before opening
-  history.pushState({ modal: "about" }, "");
-  aboutDrawer.classList.add("show");
-  drawerOverlay.classList.add("show");
-});
-
-// --- 8. SYSTEM-WIDE DARK MODE TOGGLE LOGIC ---
+// --- 7. SYSTEM-WIDE DARK MODE TOGGLE LOGIC ---
 function initThemeLogic() {
   const themeToggle = document.getElementById("theme-toggle");
   const body = document.body;
-
-  if (!themeToggle) {
-    console.error("Theme toggle button not found in the HTML!");
-    return;
-  }
+  if (!themeToggle) return;
 
   function applyTheme(isDark) {
     const themeMeta = document.querySelector('meta[name="theme-color"]');
+    const moonIcon =
+      '<svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+    const sunIcon =
+      '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
 
     if (isDark) {
       body.classList.add("dark-mode");
-      themeToggle.innerText = "☀️";
+      themeToggle.innerHTML = `<span class="menu-icon">${sunIcon}</span> Light Mode`;
       if (themeMeta) themeMeta.setAttribute("content", "#0d1117");
     } else {
       body.classList.remove("dark-mode");
-      themeToggle.innerText = "🌙";
+      themeToggle.innerHTML = `<span class="menu-icon">${moonIcon}</span> Dark Mode`;
       if (themeMeta) themeMeta.setAttribute("content", "#fffcfb");
     }
   }
@@ -615,39 +588,109 @@ function initThemeLogic() {
     "(prefers-color-scheme: dark)",
   ).matches;
 
-  if (savedTheme === "dark" || (!savedTheme && systemPrefersDark)) {
+  if (savedTheme === "dark" || (!savedTheme && systemPrefersDark))
     applyTheme(true);
-  } else {
-    applyTheme(false);
-  }
+  else applyTheme(false);
 
-  themeToggle.addEventListener("click", () => {
+  themeToggle.addEventListener("click", (e) => {
+    e.preventDefault();
     const isCurrentlyDark = body.classList.contains("dark-mode");
     applyTheme(!isCurrentlyDark);
     localStorage.setItem("theme", !isCurrentlyDark ? "dark" : "light");
+
+    if (sideMenu) sideMenu.classList.remove("show");
+    if (brandToggle) brandToggle.classList.remove("open");
+    if (drawerOverlay && !uploadSheet.classList.contains("show")) {
+      drawerOverlay.classList.remove("show");
+    }
+
+    const searchContainer = document.querySelector(".glass-search-container");
+    if (searchContainer) {
+      searchContainer.style.opacity = "1";
+      searchContainer.style.pointerEvents = "auto";
+    }
   });
 
   window
     .matchMedia("(prefers-color-scheme: dark)")
     .addEventListener("change", (e) => {
-      if (!localStorage.getItem("theme")) {
-        applyTheme(e.matches);
-      }
+      if (!localStorage.getItem("theme")) applyTheme(e.matches);
     });
 }
+
+// --- 8. GLOBAL MAP SEARCH LOGIC (TOP NAVIGATION) ---
+if (globalSearchInput) {
+  globalSearchInput.addEventListener("input", (e) => {
+    const query = e.target.value.trim();
+    clearTimeout(globalSearchTimeout);
+    globalSearchResults.innerHTML = "";
+
+    if (query.length < 3) {
+      globalSearchResults.classList.remove("show");
+      return;
+    }
+
+    globalSearchTimeout = setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`,
+        );
+        const results = await response.json();
+        globalSearchResults.innerHTML = "";
+
+        if (results.length === 0) {
+          globalSearchResults.innerHTML = `<div class="search-result-item" style="color: #aaa; text-align:center;">No places found</div>`;
+          globalSearchResults.classList.add("show");
+          return;
+        }
+
+        results.forEach((place) => {
+          const item = document.createElement("div");
+          item.className = "search-result-item";
+          item.innerText = place.display_name.split(",").slice(0, 3).join(",");
+
+          item.addEventListener("click", () => {
+            const lat = parseFloat(place.lat);
+            const lon = parseFloat(place.lon);
+
+            globalSearchInput.value = "";
+            globalSearchResults.classList.remove("show");
+            globalSearchInput.blur();
+            map.flyTo([lat, lon], 12, {
+              animate: true,
+              duration: 2.0,
+              easeLinearity: 0.25,
+            });
+          });
+          globalSearchResults.appendChild(item);
+        });
+        globalSearchResults.classList.add("show");
+      } catch (error) {
+        console.error("Global search error:", error);
+      }
+    }, 500);
+  });
+}
+
+document.addEventListener("click", (e) => {
+  if (
+    globalSearchInput &&
+    e.target !== globalSearchInput &&
+    !globalSearchResults.contains(e.target)
+  ) {
+    globalSearchResults.classList.remove("show");
+  }
+});
 
 // --- AUTO-REFRESH ON WAKE ---
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
-    
-    // This prevents the map from flashing and interrupting the camera return.
-    if (uploadBtn.innerText === "Capture" && !uploadSheet.classList.contains("show")) {
-      console.log("App woke up naturally. Refreshing the sky...");
+    if (
+      uploadBtn.innerText === "Capture" &&
+      !uploadSheet.classList.contains("show")
+    ) {
       fetchAllPins();
-    } else {
-      console.log("Returned from camera. Skipping refresh to protect upload.");
     }
-    
   }
 });
 

@@ -1,106 +1,350 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vesper</title>
-    <meta name="description" content="Vesper: Drop a pin and share your sky. A beautiful, map-based gallery to capture and share sunsets and night skies.">
+    <meta
+      name="description"
+      content="Vesper: Drop a pin and share your sky. A beautiful, map-based gallery to capture and share sunsets and night skies."
+    />
 
-    <link rel="preconnect" href="https://unpkg.com" crossorigin>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js" defer></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=20" />
-    
-    <link rel="manifest" href="/manifest.json">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#fffcfb">
-    <link rel="apple-touch-icon" href="/static/images/icon-192.png">
-</head>
-<body>
-    <button id="about-btn" class="glass-pill brand-pill" aria-label="About Vesper">
-        Vesper
-    </button>
+    <link rel="preconnect" href="https://unpkg.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js"
+      defer
+    ></script>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}?v=42"
+    />
 
-    <button id="theme-toggle" class="glass-pill theme-pill" aria-label="Toggle dark mode">
-        🌙
-    </button>
-
-    <div id="drawer-overlay" class="drawer-overlay"></div> 
-    
-    <div id="about-drawer" class="about-drawer">
-        <div class="drawer-handle"></div>
-        <h2>About Vesper</h2>
-        <div class="about-content">
-            <p style="text-align: center; margin-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px;">
-                <em style="color: #ff5e3a; font-size: 1.15rem; letter-spacing: 0.5px;"><strong>vesper</strong> (n.) — the evening star; twilight.</em>
-            </p>
-            <div id="about-content" class="about-content">
-              <p>It started with a simple conversation — about fleeting sunsets, a beautiful moon, all the small moments where you stop everything to look up at the sky. The ones that are so easy to miss, and yet somehow feel the most important.</p>
-              <p>We wanted a place to hold onto that pause. Somewhere to catch the skies we missed, shared quietly by strangers who stopped, just like us. That's how <strong>Vesper</strong> was born.</p>
-              <p>No profiles, no followers, no noise — just a map of anonymous moments that someone, somewhere out there, looked up and decided to share.</p>
-              <p> Drop a pin. Share your sky.</p>
+    <link rel="manifest" href="/manifest.json" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="theme-color" content="#fffcfb" />
+    <link rel="apple-touch-icon" href="/static/images/icon-192.png" />
+  </head>
+  <body>
+    <div class="top-ui-layer">
+      <div class="top-bar-container">
+        <div class="brand-menu-container">
+          <button
+            id="brand-toggle"
+            class="glass-pill brand-pill"
+            aria-label="Open Menu"
+          >
+            <div class="hamburger-icon">
+              <span></span>
+              <span></span>
+              <span></span>
             </div>
-            <p class="built-with">Built with 🧡</p>
-        </div>
-    </div> 
-
-    <div id="upload-sheet" class="about-drawer" style="padding-bottom: 40px; z-index: 3600;">
-        <div class="drawer-handle" id="upload-handle"></div>
-        
-        <h2 style="text-align: center; margin-bottom: 10px; font-size: 1.4rem;">Archive the sky.</h2>
-        <p style="text-align: center; color: #aaa; font-size: 0.95rem; margin-bottom: 25px; line-height: 1.4;">
-            Whether it's a glowing dusk, a moody twilight, or a quiet moon. Save the fading light.
-        </p>
-        
-        <div class="type-selector" style="display: flex; justify-content: center; flex-wrap: wrap; gap: 15px; margin-bottom: 30px;">
-            <label style="color: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; white-space: nowrap;">
-                <input type="radio" name="capture_type" value="sun" checked style="margin-right: 8px;"> 
-                <span style="font-size: 0.95rem;">☀️ Dusk & Twilight</span>
-            </label>
-            <label style="color: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; white-space: nowrap;">
-                <input type="radio" name="capture_type" value="moon" style="margin-right: 8px;"> 
-                <span style="font-size: 0.95rem;">🌙 Night Sky</span>
-            </label>
+            <span class="brand-text">Vesper</span>
+          </button>
         </div>
 
-        <button class="action-btn" id="btn-camera" aria-label="Open Camera">Open Camera</button>
-        <button class="action-btn" id="btn-gallery" aria-label="Choose from Camera Roll">Choose from Camera Roll</button>
+        <div class="glass-search-container">
+          <span class="search-icon">
+            <svg viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </span>
+          <input
+            type="text"
+            id="global-search-input"
+            placeholder="Teleport to a city..."
+            autocomplete="off"
+          />
+          <div id="global-search-results" class="search-results"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="side-menu" class="side-menu">
+      <a
+        href="{{ url_for('about') }}"
+        class="menu-item"
+        style="margin-top: 30px"
+      >
+        <span class="menu-icon">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+        </span>
+        About Vesper
+      </a>
+
+      <a
+        href="#"
+        class="menu-item"
+        onclick="showToast('Your archive is coming soon!')"
+      >
+        <span class="menu-icon">
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+            ></path>
+          </svg>
+        </span>
+        My Archive
+      </a>
+
+      <a href="#" id="theme-toggle" class="menu-item">
+        <span class="menu-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </span>
+        Dark Mode
+      </a>
+    </div>
+
+    <div id="drawer-overlay" class="drawer-overlay"></div>
+
+    <div
+      id="upload-sheet"
+      class="about-drawer"
+      style="padding-bottom: 40px; z-index: 3600"
+    >
+      <div class="drawer-handle" id="upload-handle"></div>
+
+      <h2
+        style="
+          text-align: center;
+          margin-bottom: 10px;
+          font-size: 1.4rem;
+          margin-top: 0;
+        "
+      >
+        Archive the sky.
+      </h2>
+
+      <p
+        style="
+          text-align: center;
+          color: inherit;
+          opacity: 0.7;
+          font-size: 0.95rem;
+          margin-bottom: 25px;
+          line-height: 1.4;
+        "
+      >
+        Whether it's a glowing dusk, a moody twilight, or a quiet moon. Save the
+        fading light.
+      </p>
+
+      <div
+        class="type-selector"
+        style="
+          display: flex;
+          justify-content: center;
+          flex-wrap: wrap;
+          gap: 15px;
+          margin-bottom: 30px;
+        "
+      >
+        <label
+          style="
+            color: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+          "
+        >
+          <input
+            type="radio"
+            name="capture_type"
+            value="sun"
+            checked
+            style="margin-right: 8px"
+          />
+          <span
+            style="
+              font-size: 0.95rem;
+              display: flex;
+              align-items: center;
+              gap: 6px;
+            "
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            Dusk & Twilight
+          </span>
+        </label>
+
+        <label
+          style="
+            color: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+          "
+        >
+          <input
+            type="radio"
+            name="capture_type"
+            value="moon"
+            style="margin-right: 8px"
+          />
+          <span
+            style="
+              font-size: 0.95rem;
+              display: flex;
+              align-items: center;
+              gap: 6px;
+            "
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            Night Sky
+          </span>
+        </label>
+      </div>
+
+      <button id="btn-camera" class="action-btn">
+        <svg viewBox="0 0 24 24">
+          <path
+            d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+          ></path>
+          <circle cx="12" cy="13" r="4"></circle>
+        </svg>
+        Take Photo
+      </button>
+
+      <button id="btn-gallery" class="action-btn">
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <polyline points="21 15 16 10 5 21"></polyline>
+        </svg>
+        Choose from Gallery
+      </button>
     </div>
 
     <div id="map"></div>
 
-    <button class="upload-btn" id="upload-btn" aria-label="Capture the sky">Capture</button>
-    
-    <input type="file" id="file-input-gallery" accept="image/*" style="display: none;" />
-    <input type="file" id="file-input-camera" accept="image/*" capture="environment" style="display: none;"/>
+    <button class="upload-btn" id="upload-btn" aria-label="Capture the sky">
+      Capture
+    </button>
+
+    <input
+      type="file"
+      id="file-input-gallery"
+      accept="image/*"
+      style="display: none"
+    />
+    <input
+      type="file"
+      id="file-input-camera"
+      accept="image/*"
+      capture="environment"
+      style="display: none"
+    />
 
     <div id="gallery-modal">
-        <span class="close-btn" id="close-btn" role="button" aria-label="Close gallery" tabindex="0">&times;</span> 
-        <div id="gallery-content" class="gallery-grid"></div>
-        <div id="gallery-loading" class="fill-loader" style="display:none;"></div>
+      <span
+        class="close-btn"
+        id="close-btn"
+        role="button"
+        aria-label="Close gallery"
+        tabindex="0"
+        >&times;</span
+      >
+      <div id="gallery-content" class="gallery-grid"></div>
+      <div id="gallery-loading" class="fill-loader" style="display: none"></div>
     </div>
 
     <div id="lightbox-modal" class="lightbox">
-        <span class="lightbox-close" onclick="closeLightbox()" role="button" aria-label="Close fullscreen image" tabindex="0">&times;</span>
-        <button class="nav-btn prev-btn" onclick="prevImage()" aria-label="Previous image">&#10094;</button>
-        <img id="lightbox-img" src="" alt="Fullscreen Sunset">
-        <button class="nav-btn next-btn" onclick="nextImage()" aria-label="Next image">&#10095;</button>
-        <div id="lightbox-date" class="lightbox-date"></div>
+      <span
+        class="lightbox-close"
+        onclick="closeLightbox()"
+        role="button"
+        aria-label="Close fullscreen image"
+        tabindex="0"
+        >&times;</span
+      >
+      <button
+        class="nav-btn prev-btn"
+        onclick="prevImage()"
+        aria-label="Previous image"
+      >
+        &#10094;
+      </button>
+      <img id="lightbox-img" src="" alt="Fullscreen Sunset" />
+      <button
+        class="nav-btn next-btn"
+        onclick="nextImage()"
+        aria-label="Next image"
+      >
+        &#10095;
+      </button>
+      <div id="lightbox-date" class="lightbox-date"></div>
     </div>
 
-    <div id="toast" class="toast"></div>
+    <div id="toast" class="toast">
+      <span class="toast-icon"></span>
+      <span id="toast-message"></span>
+    </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-    <script src="{{ url_for('static', filename='script.js') }}?v=20" defer></script>
-    
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      defer
+    ></script>
+    <script
+      src="{{ url_for('static', filename='script.js') }}?v=42"
+      defer
+    ></script>
+
     <script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/service_worker.js')
-                .then(reg => console.log('Service Worker registered!', reg.scope))
-                .catch(err => console.error('Service Worker failed:', err));
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("/service_worker.js")
+            .then((reg) => console.log("Service Worker registered!", reg.scope))
+            .catch((err) => console.error("Service Worker failed:", err));
         });
-    }
+      }
     </script>
-</body>
+  </body>
 </html>

@@ -1,4 +1,6 @@
-/* --- Clean MVP Styling --- */
+/* ==============================================
+   1. GLOBAL MVP STYLING
+   ============================================== */
 body,
 html {
     margin: 0;
@@ -6,7 +8,6 @@ html {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     height: 100%;
     background-color: #fffcfb;
-    /* Smooth global color fade */
     transition: background-color 0.5s ease, color 0.5s ease;
 }
 
@@ -18,16 +19,16 @@ html {
     width: 100vw;
     z-index: 1;
     background-color: #f3f6f4;
-    /* Smooth map background fade */
     transition: background-color 0.5s ease;
 }
 
-/* Matches the inverted dark mode map base color */
 body.dark-mode #map {
     background-color: #1a1e23;
 }
 
-/* Floating Upload Button */
+/* ==============================================
+   2. FLOATING CAPTURE BUTTON
+   ============================================== */
 .upload-btn {
     position: absolute;
     bottom: 30px;
@@ -53,24 +54,20 @@ body.dark-mode #map {
     text-overflow: ellipsis;
 }
 
-/* Apply hover ONLY on devices with a real mouse */
+/* THE FIX: Glowing borders instead of solid fills */
 @media (hover: hover) {
     .upload-btn:hover {
-        background-color: #ff5e3a !important;
-        color: white !important;
+        border-color: #ff5e3a !important;
+        box-shadow: 0 4px 20px rgba(255, 94, 58, 0.2) !important;
         transform: translateX(-50%) scale(1.05) !important;
-        box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4) !important;
-        border-color: transparent !important;
     }
 }
 
-/* Apply active state for the exact moment of a click/tap */
 .upload-btn:active {
-    background-color: #ff5e3a !important;
-    color: white !important;
+    border-color: #ff5e3a !important;
+    box-shadow: 0 4px 20px rgba(255, 94, 58, 0.2) !important;
     transform: translateX(-50%) scale(0.98) !important;
-    box-shadow: 0 2px 10px rgba(255, 94, 58, 0.4) !important;
-    border-color: transparent !important;
+    transition: transform 0.1s ease !important;
 }
 
 .upload-btn:disabled {
@@ -89,89 +86,101 @@ body.dark-mode #map {
     }
 }
 
+/* ==============================================
+   3. NATIVE SPRING TOAST NOTIFICATIONS
+   ============================================== */
 .toast {
-    position: absolute;
-    top: -100px;
-    opacity: 0;
+    position: fixed;
+    bottom: 100px;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%, 30px) scale(0.85);
+    opacity: 0;
+    visibility: hidden;
 
-    /* Matches Top Pill perfectly */
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-
-    /* Matches Vesper text color */
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     color: #333;
+    border: 1px solid rgba(255, 255, 255, 0.5);
 
-    padding: 14px 28px;
-    max-width: calc(100vw - 40px);
-    box-sizing: border-box;
-    border-radius: 30px;
-    font-weight: bold;
-    font-size: 16px;
-    z-index: 3000;
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-    width: max-content;
-    text-align: center;
-    line-height: 1.5;
+    padding: 12px 24px;
+    border-radius: 40px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    z-index: 9999;
+
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1), 0 0 20px rgba(255, 94, 58, 0.2);
+
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    white-space: nowrap;
+    pointer-events: none;
 }
 
 .toast.show {
-    top: max(20px, env(safe-area-inset-top));
+    transform: translate(-50%, 0) scale(1);
     opacity: 1;
+    visibility: visible;
 }
 
+.toast-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.toast-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+body.dark-mode .toast {
+    background: rgba(20, 20, 20, 0.85);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25), 0 0 25px rgba(255, 94, 58, 0.35);
+}
+
+/* ==============================================
+   4. MAP PINS
+   ============================================== */
 .sunset-wrapper {
     background: transparent;
     border: none;
 }
 
-/* =========================================
-   1. THE ARCHIVE PIN (Standard Base)
-   ========================================= */
 .premium-pin {
     width: 16px;
-    /* Matched to Today pin size */
     height: 16px;
     background-color: #ff5e3a;
-    /* Solid Vesper Orange */
     border-radius: 50%;
     border: 2px solid #ffffff;
-    /* Crisp white border */
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     position: relative;
     cursor: pointer;
     opacity: 1;
-    /* Completely solid */
 }
 
 .premium-pin:hover {
     transform: scale(1.15);
-    /* Matched hover scale */
     box-shadow: 0 4px 12px rgba(255, 94, 58, 0.4);
 }
 
-body.dark-mode .premium-pin {
-    border-color: #e0e0e0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-}
-
-body.dark-mode .premium-pin:hover {
-    border-color: #ffffff;
-}
-
-/* =========================================
-   2. THE "TODAY" PIN (Base + Core + Pulse)
-   ========================================= */
 .today-pin {
     width: 16px;
     height: 16px;
     background-color: #ff5e3a;
-    /* Exact same base as premium-pin */
     border-radius: 50%;
     border: 2px solid #ffffff;
     box-shadow: 0 0 12px rgba(255, 94, 58, 0.8);
@@ -182,23 +191,12 @@ body.dark-mode .premium-pin:hover {
     align-items: center;
     justify-content: center;
     opacity: 1;
-    /* Completely solid */
 }
 
 .today-pin:hover {
     transform: scale(1.15);
-    /* Matched hover scale */
 }
 
-body.dark-mode .today-pin {
-    border-color: #e0e0e0;
-}
-
-body.dark-mode .today-pin:hover {
-    border-color: #ffffff;
-}
-
-/* The glowing white "Live Core" Bullseye */
 .today-pin::before {
     content: '';
     width: 6px;
@@ -208,7 +206,6 @@ body.dark-mode .today-pin:hover {
     box-shadow: 0 0 4px rgba(255, 255, 255, 0.9);
 }
 
-/* The Vesper Orange Radar Pulse */
 .today-pin::after {
     content: '';
     position: absolute;
@@ -234,6 +231,497 @@ body.dark-mode .today-pin:hover {
     }
 }
 
+body.dark-mode .premium-pin,
+body.dark-mode .today-pin {
+    border-color: #e0e0e0;
+}
+
+body.dark-mode .premium-pin {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+body.dark-mode .premium-pin:hover,
+body.dark-mode .today-pin:hover {
+    border-color: #ffffff;
+}
+
+/* ==============================================
+   5. TOP UI LAYER (Single Row Layout)
+   ============================================== */
+.top-ui-layer {
+    position: absolute;
+    top: max(15px, env(safe-area-inset-top));
+    left: 0;
+    width: 100vw;
+    padding: 0 15px;
+    box-sizing: border-box;
+    z-index: 4100;
+    pointer-events: none;
+}
+
+.top-bar-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    flex-wrap: nowrap;
+}
+
+.brand-menu-container {
+    position: relative;
+    pointer-events: auto;
+    flex-shrink: 0;
+}
+
+.glass-pill {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    color: #333;
+    outline: none;
+    text-decoration: none;
+    pointer-events: auto;
+}
+
+.brand-pill {
+    gap: 0;
+    padding: 10px 14px;
+    border-radius: 30px;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 1.1rem;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.brand-pill.open {
+    gap: 8px;
+    padding: 10px 18px;
+}
+
+.brand-text {
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.brand-pill.open .brand-text {
+    max-width: 100px;
+    opacity: 1;
+}
+
+.hamburger-icon {
+    position: relative;
+    width: 18px;
+    height: 14px;
+    margin-right: 0;
+}
+
+.hamburger-icon span {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 2.5px;
+    background: currentColor;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.hamburger-icon span:nth-child(1) {
+    top: 0;
+}
+
+.hamburger-icon span:nth-child(2) {
+    top: 6px;
+}
+
+.hamburger-icon span:nth-child(3) {
+    top: 12px;
+}
+
+.brand-pill.open .hamburger-icon span:nth-child(1) {
+    top: 6px;
+    transform: rotate(45deg);
+}
+
+.brand-pill.open .hamburger-icon span:nth-child(2) {
+    opacity: 0;
+    transform: translateX(-10px);
+}
+
+.brand-pill.open .hamburger-icon span:nth-child(3) {
+    top: 6px;
+    transform: rotate(-45deg);
+}
+
+/* --- THE SLIDE-IN SIDE MENU --- */
+.side-menu {
+    position: fixed;
+    top: 0;
+    left: -320px;
+    width: 280px;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-right: 1px solid rgba(255, 255, 255, 0.3);
+    z-index: 4000;
+    padding: max(40px, env(safe-area-inset-top)) 20px 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.15);
+
+    opacity: 0;
+    visibility: hidden;
+    transition: left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.side-menu.show {
+    left: 0;
+    opacity: 1;
+    visibility: visible;
+}
+
+body.dark-mode .side-menu {
+    background: rgba(15, 15, 15, 0.75);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.5);
+}
+
+.side-menu-header {
+    margin-bottom: 10px;
+    padding: 0 16px 15px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    margin-top: 30px;
+}
+
+body.dark-mode .side-menu-header {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    color: #333;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border-radius: 30px;
+    transition: all 0.2s ease;
+}
+
+.menu-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.8;
+    color: inherit;
+}
+
+.menu-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+@media (hover: hover) {
+    .menu-item:hover {
+        background: rgba(255, 94, 58, 0.15);
+        color: #ff5e3a;
+    }
+}
+
+.menu-item:active {
+    background: rgba(255, 94, 58, 0.2) !important;
+    transform: scale(0.98);
+}
+
+/* ==============================================
+   THE FULL-WIDTH SEARCH BAR
+   ============================================== */
+.glass-search-container {
+    flex-grow: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 25px;
+    padding: 0 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    pointer-events: auto;
+}
+
+.glass-search-container:focus-within {
+    border-color: #ff5e3a;
+    box-shadow: 0 4px 20px rgba(255, 94, 58, 0.2);
+}
+
+.search-icon {
+    font-size: 1.1rem;
+    opacity: 0.7;
+    flex-shrink: 0;
+    margin-right: 10px;
+}
+
+.search-icon svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+#global-search-input,
+#location-search {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: #333;
+    font-size: 1rem;
+    padding: 12px 0;
+    outline: none;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+#global-search-input::placeholder,
+#location-search::placeholder {
+    color: rgba(51, 51, 51, 0.6);
+}
+
+/* HOVER & ACTIVE STATES (Top UI) */
+@media (hover: hover) {
+
+    .glass-pill:hover,
+    .glass-search-container:hover {
+        border-color: #ff5e3a !important;
+        box-shadow: 0 4px 20px rgba(255, 94, 58, 0.2) !important;
+    }
+
+    .brand-pill:hover {
+        transform: scale(1.02) !important;
+    }
+}
+
+.glass-pill:active,
+.brand-pill.open {
+    border-color: #ff5e3a !important;
+    box-shadow: 0 4px 20px rgba(255, 94, 58, 0.2) !important;
+}
+
+.brand-pill:active {
+    transform: scale(0.98) !important;
+}
+
+/* ==============================================
+   6. SEARCH RESULTS & MANUAL SEARCH
+   ============================================== */
+.location-search-container {
+    position: relative;
+    width: 100%;
+    margin-bottom: 25px;
+}
+
+#location-search {
+    width: 100%;
+    padding: 14px 20px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    color: #333;
+    font-size: 1rem;
+    outline: none;
+    box-sizing: border-box;
+}
+
+#location-search::placeholder {
+    color: rgba(51, 51, 51, 0.6);
+}
+
+#location-search:focus {
+    border-color: #ff5e3a;
+    background: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 0 15px rgba(255, 94, 58, 0.2);
+}
+
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    margin-top: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 4000;
+    display: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.search-results.show {
+    display: block;
+}
+
+.search-result-item {
+    padding: 12px 16px;
+    color: #e0e0e0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    transition: background 0.2s;
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item:hover,
+.search-result-item:active {
+    background: rgba(255, 94, 58, 0.3);
+    color: white;
+}
+
+/* ==============================================
+   7. UPLOAD DRAWER & OVERLAYS
+   ============================================== */
+.drawer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 3400;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.drawer-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.about-drawer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.85);
+    color: #333;
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-top: 1px solid rgba(255, 255, 255, 0.5);
+    z-index: 3500;
+    border-top-left-radius: 30px;
+    border-top-right-radius: 30px;
+    padding: 20px 30px 50px 30px;
+    box-sizing: border-box;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.1);
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.about-drawer.show {
+    transform: translateY(0);
+}
+
+.drawer-handle {
+    width: 40px;
+    height: 5px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    margin: 0 auto 20px auto;
+    cursor: pointer;
+}
+
+.action-btn {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    color: #333;
+    padding: 15px 30px;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.action-btn svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* THE FIX: Glowing borders instead of solid fills for Drawer Buttons */
+@media (hover: hover) {
+    .action-btn:hover {
+        border-color: #ff5e3a !important;
+        box-shadow: 0 4px 20px rgba(255, 94, 58, 0.2) !important;
+        transform: scale(1.02) !important;
+    }
+}
+
+.action-btn:active {
+    border-color: #ff5e3a !important;
+    box-shadow: 0 4px 20px rgba(255, 94, 58, 0.2) !important;
+    transform: scale(0.98) !important;
+    transition: transform 0.1s ease !important;
+}
+
+/* ==============================================
+   8. GALLERY & LIGHTBOX
+   ============================================== */
 #gallery-modal {
     display: flex;
     opacity: 0;
@@ -306,7 +794,6 @@ body.dark-mode .today-pin:hover {
     height: 100%;
 }
 
-/* --- Gallery Image Badges & Dates --- */
 .type-badge {
     position: absolute;
     top: 10px;
@@ -322,12 +809,6 @@ body.dark-mode .today-pin:hover {
     z-index: 10;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     transition: background 0.3s ease, border-color 0.3s ease;
-}
-
-/* Dark Mode Override for the Emoji Badge */
-body.dark-mode .type-badge {
-    background: rgba(0, 0, 0, 0.5);
-    border-color: rgba(255, 255, 255, 0.15);
 }
 
 .image-date {
@@ -346,13 +827,6 @@ body.dark-mode .type-badge {
     pointer-events: none;
     transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
     border: 1px solid transparent;
-}
-
-/* 🌙 Dark Mode Override for Date Pill */
-body.dark-mode .image-date {
-    background: rgba(0, 0, 0, 0.5);
-    color: #e0e0e0;
-    border-color: rgba(255, 255, 255, 0.15);
 }
 
 @keyframes fadeUp {
@@ -382,7 +856,11 @@ body.dark-mode .image-date {
     touch-action: none;
 }
 
-/* --- THE LIGHTBOX DATE PILL --- */
+.lightbox.show {
+    visibility: visible;
+    opacity: 1;
+}
+
 .lightbox-date {
     margin-top: 20px;
     background: rgba(255, 255, 255, 0.7);
@@ -400,17 +878,6 @@ body.dark-mode .image-date {
     transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
-body.dark-mode .lightbox-date {
-    background: rgba(0, 0, 0, 0.6);
-    color: #e0e0e0;
-    border-color: rgba(255, 255, 255, 0.15);
-}
-
-.lightbox.show {
-    visibility: visible;
-    opacity: 1;
-}
-
 #lightbox-img {
     max-width: 90vw;
     max-height: 80vh;
@@ -425,31 +892,31 @@ body.dark-mode .lightbox-date {
     transform: scale(1);
 }
 
-.nav-btn {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
+.nav-btn,
+.close-btn,
+.lightbox-close {
     background: rgba(255, 255, 255, 0.3);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     color: #333;
     border: 1px solid rgba(255, 255, 255, 0.4);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    width: 50px;
-    height: 50px;
-    font-size: 20px;
     cursor: pointer;
     border-radius: 50%;
     z-index: 3100;
     transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.nav-btn:hover {
-    background: rgba(255, 94, 58, 0.9);
-    color: white;
-    border-color: transparent;
-    transform: translateY(-50%) scale(1.1);
-    box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4);
+.nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
 }
 
 .prev-btn {
@@ -465,28 +932,16 @@ body.dark-mode .lightbox-date {
     position: absolute;
     top: 25px;
     right: 25px;
-    background: rgba(255, 255, 255, 0.3);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    color: #333;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     width: 48px;
     height: 48px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     font-size: 28px;
-    cursor: pointer;
-    z-index: 3100;
-    transition: all 0.2s ease;
     line-height: 1;
     padding: 0;
     box-sizing: border-box;
     font-family: monospace;
 }
 
+.nav-btn:hover,
 .close-btn:hover,
 .lightbox-close:hover {
     background: rgba(255, 94, 58, 0.9);
@@ -496,6 +951,13 @@ body.dark-mode .lightbox-date {
     box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4);
 }
 
+.nav-btn:hover {
+    transform: translateY(-50%) scale(1.1);
+}
+
+/* ==============================================
+   9. LOADERS
+   ============================================== */
 .fill-loader {
     position: absolute;
     top: 50%;
@@ -536,23 +998,70 @@ body.dark-mode .lightbox-date {
     }
 }
 
-/* --- THE TWO PILLS UX --- */
-.glass-pill {
-    position: absolute;
-    top: max(20px, env(safe-area-inset-top));
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    color: #333;
-    outline: none;
+/* ==============================================
+   10. SYSTEM-WIDE DARK MODE
+   ============================================== */
+body.dark-mode {
+    background-color: #0d1117;
+    color: #e0e0e0;
+}
+
+body.dark-mode p,
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode label {
+    color: #e0e0e0;
+}
+
+body.dark-mode .upload-btn {
+    background-color: rgba(0, 0, 0, 0.5);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #e0e0e0;
+}
+
+body.dark-mode .drawer-overlay {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+body.dark-mode .about-drawer {
+    background: rgba(15, 15, 15, 0.85);
+    color: #e0e0e0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .drawer-handle {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+body.dark-mode .action-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+body.dark-mode .toast {
+    color: #e6e6e6;
+    background: rgba(0, 0, 0, 0.5);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.dark-mode .type-badge {
+    background: rgba(0, 0, 0, 0.5);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+body.dark-mode .image-date {
+    background: rgba(0, 0, 0, 0.5);
+    color: #e0e0e0;
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+body.dark-mode .lightbox-date {
+    background: rgba(0, 0, 0, 0.6);
+    color: #e0e0e0;
+    border-color: rgba(255, 255, 255, 0.15);
 }
 
 body.dark-mode .glass-pill {
@@ -561,220 +1070,25 @@ body.dark-mode .glass-pill {
     color: #e0e0e0;
 }
 
-/* 1. Brand Pill Specifics */
-.brand-pill {
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 10px 24px;
-    border-radius: 30px;
-    font-family: inherit;
-    font-weight: 800;
-    font-size: 1.2rem;
-    letter-spacing: 0.5px;
-}
-
-/* 2. Theme Pill Specifics */
-.theme-pill {
-    right: 20px;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    font-size: 1.2rem;
-    padding: 0;
-    /* A buttery, spring-like transition */
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-/* ==============================================
-   HOVER STATES (Only for Desktop/Mouse devices)
-   ============================================== */
-@media (hover: hover) {
-    .glass-pill:hover {
-        background: #ff5e3a !important;
-        color: white !important;
-        border-color: transparent !important;
-        box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4) !important;
-    }
-
-    .brand-pill:hover {
-        transform: translateX(-50%) scale(1.05) !important;
-    }
-
-    .theme-pill:hover {
-        transform: scale(1.1) !important;
-    }
-}
-
-/* ==============================================
-   ACTIVE STATES (The actual click/tap for ALL devices)
-   ============================================== */
-.glass-pill:active {
-    background: #ff5e3a !important;
-    color: white !important;
-    border-color: transparent !important;
-    box-shadow: 0 4px 15px rgba(255, 94, 58, 0.4) !important;
-}
-
-.brand-pill:active {
-    transform: translateX(-50%) scale(1.05) !important;
-}
-
-.theme-pill:active {
-    transform: scale(0.9) rotate(-15deg) !important;
-    background: rgba(255, 255, 255, 0.5) !important;
-}
-
-.drawer-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.4);
-    z-index: 3400;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
-}
-
-.drawer-overlay.show {
-    opacity: 1;
-    visibility: visible;
-}
-
-.about-drawer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background: rgba(10, 10, 10, 0.55);
-    backdrop-filter: blur(25px);
-    -webkit-backdrop-filter: blur(25px);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 3500;
-    border-top-left-radius: 30px;
-    border-top-right-radius: 30px;
-    padding: 20px 30px 50px 30px;
-    box-sizing: border-box;
-    color: white;
-    transform: translateY(100%);
-    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
-    max-height: 85vh;
-    overflow-y: auto;
-}
-
-.about-drawer.show {
-    transform: translateY(0);
-}
-
-.drawer-handle {
-    width: 40px;
-    height: 5px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 5px;
-    margin: 0 auto 20px auto;
-    cursor: pointer;
-}
-
-.about-drawer h2 {
-    margin-top: 0;
-    color: #ff5e3a;
-    font-size: 1.5rem;
-}
-
-.about-drawer p {
-    font-size: 0.95rem;
-    line-height: 1.5;
-    color: #ddd;
-}
-
-.built-with {
-    margin-top: 30px;
-    font-size: 0.8rem !important;
-    color: #888 !important;
-    text-align: center;
-}
-
-.about-content p {
-    line-height: 1.6;
-    margin-bottom: 1rem;
-    font-size: 1.05rem;
-}
-
-.about-content em {
-    color: #ff5e3a;
-}
-
-/* --- Upload Action Sheet Buttons --- */
-.action-btn {
-    width: 100%;
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    color: white;
-    padding: 15px 30px;
-    border-radius: 30px;
-    font-size: 16px;
-    font-weight: bold;
-    margin-bottom: 15px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-/* Apply hover ONLY on devices with a real mouse */
-@media (hover: hover) {
-    .action-btn:hover {
-        background-color: #ff5e3a !important;
-        color: white !important;
-        border-color: transparent !important;
-        box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4) !important;
-        transform: scale(1.02) !important;
-    }
-}
-
-/* Apply active state for the exact moment of a click/tap */
-.action-btn:active {
-    background-color: #ff5e3a !important;
-    color: white !important;
-    border-color: transparent !important;
-    box-shadow: 0 2px 10px rgba(255, 94, 58, 0.4) !important;
-    transform: scale(0.98) !important;
-    /* Satisfying click dip */
-}
-
-/* --- DARK MODE & MOON STYLES --- */
-body.dark-mode {
-    background-color: #0d1117;
+body.dark-mode .menu-item {
     color: #e0e0e0;
 }
 
-/* Dark Mode Override for the Capture Button */
-body.dark-mode .upload-btn {
-    background-color: rgba(0, 0, 0, 0.5);
+body.dark-mode .glass-search-container {
+    background: rgba(0, 0, 0, 0.5);
     border-color: rgba(255, 255, 255, 0.15);
+}
+
+body.dark-mode #global-search-input,
+body.dark-mode #location-search {
     color: #e0e0e0;
 }
 
-/* Force standard text elements to flip to light grey in dark mode */
-body.dark-mode p,
-body.dark-mode h1,
-body.dark-mode h2,
-body.dark-mode h3,
-body.dark-mode label,
-body.dark-mode .about-content {
-    color: #e0e0e0;
+body.dark-mode #global-search-input::placeholder,
+body.dark-mode #location-search::placeholder {
+    color: rgba(224, 224, 224, 0.5);
 }
 
-/* Keep signature orange accents popping */
-body.dark-mode .about-drawer h2,
-body.dark-mode em {
-    color: #ff5e3a;
-}
-
-/* Makes the map tiles fade smoothly into dark mode instead of snapping */
 .leaflet-layer,
 .leaflet-control-zoom-in,
 .leaflet-control-zoom-out {
@@ -787,42 +1101,27 @@ body.dark-mode .leaflet-control-zoom-out {
     filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
 }
 
-/* --- Master Mobile & Tablet Optimization --- */
+/* ==============================================
+   11. LEAFLET TWEAKS (Bottom Right Controls)
+   ============================================== */
+.leaflet-bottom.leaflet-right {
+    margin-bottom: 40px;
+    margin-right: 20px;
+}
+
+/* ==============================================
+   12. MOBILE & TABLET OPTIMIZATIONS
+   ============================================== */
 @media (max-width: 768px) {
 
-    /* 1. Hide Desktop Controls */
     .leaflet-control-zoom,
     .nav-btn,
     .lightbox-close {
         display: none !important;
     }
 
-    /* 2. Give the drawer text more horizontal room */
-    .about-drawer {
-        padding: 20px 20px 40px 20px;
-    }
-
-    /* 3. Scale down the headings */
-    .about-drawer h2 {
-        font-size: 1.3rem;
-        margin-bottom: 10px;
-    }
-
     #upload-sheet h2 {
         font-size: 1.15rem !important;
-    }
-
-    /* 4. Make the story text perfectly readable */
-    .about-content p {
-        font-size: 0.95rem;
-        line-height: 1.5;
-        margin-bottom: 0.9rem;
-    }
-
-    /* 5. Shrink the signature and buttons */
-    .built-with {
-        font-size: 0.75rem !important;
-        margin-top: 20px;
     }
 
     .action-btn {
@@ -830,7 +1129,6 @@ body.dark-mode .leaflet-control-zoom-out {
         padding: 12px 20px;
     }
 
-    /* 6. Fix overlapping gallery badges on small screens */
     .image-date {
         top: auto !important;
         bottom: 10px !important;
@@ -843,42 +1141,17 @@ body.dark-mode .leaflet-control-zoom-out {
         padding: 4px 6px;
     }
 
-    /* 7. Balance the Top Pills on Mobile */
-    .brand-pill {
-            left: 20px;
-            /* Push to the left edge */
-            transform: none !important;
-            /* Remove the center alignment */
-        }
-    
-    /* THE ULTIMATE FIX: Aggressively block desktop hover/focus bleed on mobile */
-    .brand-pill:hover,
-    .brand-pill:focus,
-    .brand-pill:active {
-            transform: scale(1.05) !important;
-        }
-
-    /* 8. THE NEW UX: Slide Toasts from Bottom on Mobile */
     .toast {
         top: auto !important;
-        /* Turn off desktop top-positioning */
         bottom: -100px !important;
-        /* Hide it below the bottom edge */
     }
 
     .toast.show {
         top: auto !important;
         bottom: 110px !important;
-        /* Slide up to hover perfectly above the Capture button */
     }
-}
 
-/* Sync Toast with Vesper Pill in Dark Mode */
-body.dark-mode .toast {
-    /* Matches the Vesper brand text in dark mode */
-    color: #e6e6e6;
-    /* Removes the heavy bright background from the previous version 
-       so it matches the clean glass of the top pill */
-    background: rgba(0, 0, 0, 0.5);
-    border-color: rgba(255, 255, 255, 0.2);
+    .side-menu {
+        width: 240px;
+    }
 }
