@@ -107,7 +107,3 @@ The application uses `gunicorn` as the production WSGI server. Ensure your `Proc
 ```plaintext
 web: gunicorn app:app
 ```
-
----
-*Built with ❤️*
-```
