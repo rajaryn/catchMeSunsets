@@ -54,6 +54,7 @@ const manualSearch = document.getElementById("manual-search");
 const manualSearchResults = document.getElementById("manual-search-results");
 const btnShareMap = document.getElementById("btn-share-map");
 const closeStagingBtn = document.getElementById("close-staging");
+const btnLiveLocation = document.getElementById("btn-live-location"); // NEW: Live Location Button
 
 // DOM Elements - Gallery & Lightbox
 const galleryModal = document.getElementById("gallery-modal");
@@ -180,8 +181,17 @@ function fetchSilentGPS() {
 async function fetchAllPins() {
   try {
     const response = await fetch(`${API_BASE}/pins`);
+
+    if (!response.ok) throw new Error(`Server error: ${response.status}`);
+
     const pins = await response.json();
     markersLayer.clearLayers();
+
+    // Prevent crashing if the backend sends an error object instead of an array
+    if (!Array.isArray(pins)) {
+      console.error("Expected an array of pins, got:", pins);
+      return;
+    }
 
     const todayString = new Date().toISOString().split("T")[0];
 
@@ -298,10 +308,7 @@ const handleFileSelection = (e) => {
   }
 
   // Setup Rest of Preview UI
-  stagingBadge.innerHTML =
-    selectedType === "moon"
-      ? svgMoon
-      : svgSun;
+  stagingBadge.innerHTML = selectedType === "moon" ? svgMoon : svgSun;
 
   const dateStr = new Date().toLocaleString(undefined, {
     month: "short",
@@ -326,6 +333,7 @@ async function processExif() {
   manualSearchWrapper.style.display = "none";
   btnShareMap.style.display = "none";
   btnShareMap.disabled = true;
+  if (btnLiveLocation) btnLiveLocation.style.display = "none";
 
   try {
     const exifData = await exifr.parse(selectedFile);
@@ -358,17 +366,18 @@ async function processExif() {
             .split(",")
             .slice(0, 3)
             .join(",");
-          // THE FIX: Unhide the search bar now that it has text in it
           manualSearchWrapper.style.display = "flex";
         }
       } catch (err) {
         console.error("Reverse geocoding failed:", err);
+        manualSearchWrapper.style.display = "flex";
       }
 
       // Setup Button
       btnShareMap.style.display = "flex";
       btnShareMap.disabled = false;
       btnShareMap.innerText = "Upload Here";
+      if (btnLiveLocation) btnLiveLocation.style.display = "none";
     } else {
       triggerFallbackLocation();
     }
@@ -377,23 +386,70 @@ async function processExif() {
   }
 }
 
+// ALWAYS SHOW SEARCH BAR IF NO EXIF FOUND
 function triggerFallbackLocation() {
-  if (uploadSource === "camera" && currentUserLat && currentUserLon) {
-    finalLat = currentUserLat;
-    finalLon = currentUserLon;
-    btnShareMap.style.display = "flex";
-    btnShareMap.disabled = false;
-    btnShareMap.innerText = "Upload Here";
-  } else {
-    showToast("No location found in photo.", true);
-    manualSearchWrapper.style.display = "flex";
-    manualSearch.value = "";
-    manualSearchResults.innerHTML = "";
-    manualSearchResults.classList.remove("show");
-    btnShareMap.style.display = "flex";
-    btnShareMap.disabled = true;
-    btnShareMap.innerText = "Select a location first";
+  showToast("No location found in photo.", true);
+
+  manualSearchWrapper.style.display = "flex";
+  manualSearch.value = "";
+  manualSearchResults.innerHTML = "";
+  manualSearchResults.classList.remove("show");
+
+  btnShareMap.style.display = "flex";
+  btnShareMap.disabled = true;
+  btnShareMap.innerText = "Select a location first";
+
+  if (btnLiveLocation) btnLiveLocation.style.display = "flex";
+}
+
+// --- LIVE LOCATION CROSSHAIR LOGIC ---
+if (btnLiveLocation) {
+  btnLiveLocation.addEventListener("click", async () => {
+    if (currentUserLat && currentUserLon) {
+      applyLiveLocation(currentUserLat, currentUserLon);
+    } else {
+      showToast("Fetching live location...");
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          currentUserLat = pos.coords.latitude;
+          currentUserLon = pos.coords.longitude;
+          applyLiveLocation(currentUserLat, currentUserLon);
+        },
+        (err) => {
+          showToast("Please allow location access to use this feature.", true);
+        },
+        { enableHighAccuracy: true, timeout: 10000 },
+      );
+    }
+  });
+}
+
+async function applyLiveLocation(lat, lon) {
+  finalLat = lat;
+  finalLon = lon;
+
+  // Give immediate visual feedback
+  manualSearch.value = "Pinpointing location...";
+
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`,
+    );
+    const data = await res.json();
+    if (data && data.display_name) {
+      manualSearch.value = data.display_name.split(",").slice(0, 3).join(",");
+    } else {
+      manualSearch.value = "Current Live Location";
+    }
+  } catch (err) {
+    manualSearch.value = "Current Live Location";
   }
+
+  // Hide the dropdown and unlock the Share button!
+  if (manualSearchResults) manualSearchResults.classList.remove("show");
+  btnShareMap.style.display = "flex";
+  btnShareMap.disabled = false;
+  btnShareMap.innerText = "Upload Here";
 }
 
 // --- LIVE AUTOCOMPLETE FOR PREVIEW SEARCH ---
@@ -472,7 +528,7 @@ btnShareMap.addEventListener("click", async () => {
   try {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `${API_BASE}/upload`);
-    
+
     const originalBackground = btnShareMap.style.background;
 
     xhr.upload.onprogress = (event) => {
@@ -535,6 +591,7 @@ function closeStagingArea() {
   manualSearch.value = "";
   manualSearchResults.innerHTML = "";
   manualSearchResults.classList.remove("show");
+  if (btnLiveLocation) btnLiveLocation.style.display = "none";
   resetShareBtn();
 }
 
