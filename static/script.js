@@ -4,6 +4,13 @@ let markersLayer;
 let currentUserLat = null;
 let currentUserLon = null;
 
+// --- SVG ICONS FOR UI (Replacing Emojis) ---
+const svgSun = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+const svgMoon = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+const svgPin = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`;
+const svgCheck = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+const svgWarn = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+
 // Search Variables
 let globalSearchTimeout = null;
 
@@ -11,32 +18,53 @@ let globalSearchTimeout = null;
 let currentGalleryImages = [];
 let currentImageIndex = 0;
 
-// DOM Elements
-const lightboxModal = document.getElementById("lightbox-modal");
-const lightboxImg = document.getElementById("lightbox-img");
-const lightboxDate = document.getElementById("lightbox-date");
+// Staging & Upload State
+let selectedFile = null;
+let finalLat = null;
+let finalLon = null;
+let finalDate = null;
+let selectedType = "sun";
+let uploadSource = "";
 
-const uploadBtn = document.getElementById("upload-btn");
-const fileInputGallery = document.getElementById("file-input-gallery");
-const fileInputCamera = document.getElementById("file-input-camera");
-const uploadSheet = document.getElementById("upload-sheet");
-const btnCamera = document.getElementById("btn-camera");
-const btnGallery = document.getElementById("btn-gallery");
-const uploadHandle = document.getElementById("upload-handle");
-
-// Search & Side Menu DOM Elements
+// DOM Elements - Main UI
+const topUiLayer = document.querySelector(".top-ui-layer");
 const brandToggle = document.getElementById("brand-toggle");
 const sideMenu = document.getElementById("side-menu");
 const globalSearchInput = document.getElementById("global-search-input");
 const globalSearchResults = document.getElementById("global-search-results");
+const drawerOverlay = document.getElementById("drawer-overlay");
 
+// DOM Elements - Capture & Drawer
+const mainCaptureBtn = document.getElementById("main-capture-btn");
+const uploadSheet = document.getElementById("upload-sheet");
+const btnCamera = document.getElementById("btn-camera");
+const btnGallery = document.getElementById("btn-gallery");
+const fileInputCamera = document.getElementById("file-input-camera");
+const fileInputGallery = document.getElementById("file-input-gallery");
+
+// DOM Elements - Staging Area (Preview)
+const stagingArea = document.getElementById("staging-area");
+const stagingImg = document.getElementById("staging-img");
+const stagingBadge = document.getElementById("staging-badge");
+const stagingDate = document.getElementById("staging-date");
+const stagingDatePill = document.getElementById("staging-date-pill");
+const locText = document.getElementById("loc-text");
+const manualSearchWrapper = document.getElementById("manual-search-wrapper");
+const manualSearch = document.getElementById("manual-search");
+const manualSearchResults = document.getElementById("manual-search-results");
+const btnShareMap = document.getElementById("btn-share-map");
+const closeStagingBtn = document.getElementById("close-staging");
+
+// DOM Elements - Gallery & Lightbox
 const galleryModal = document.getElementById("gallery-modal");
 const galleryContent = document.getElementById("gallery-content");
 const closeBtn = document.getElementById("close-btn");
 const galleryLoading = document.getElementById("gallery-loading");
-const drawerOverlay = document.getElementById("drawer-overlay");
+const lightboxModal = document.getElementById("lightbox-modal");
+const lightboxImg = document.getElementById("lightbox-img");
+const lightboxDate = document.getElementById("lightbox-date");
 
-// --- Toast Logic (With Native SVGs) ---
+// --- Toast Logic ---
 function showToast(message, isError = false) {
   const toastEl = document.getElementById("toast");
   const toastMsg = document.getElementById("toast-message");
@@ -57,13 +85,10 @@ function showToast(message, isError = false) {
   }, 3000);
 }
 
-// --- NETWORK SPEED DETECTOR ---
 function isNetworkSlow() {
   if (navigator.connection && navigator.connection.effectiveType) {
     const speed = navigator.connection.effectiveType;
-    if (speed === "2g" || speed === "slow-2g" || speed === "3g") {
-      return true;
-    }
+    if (speed === "2g" || speed === "slow-2g" || speed === "3g") return true;
   }
   return false;
 }
@@ -73,13 +98,13 @@ window.addEventListener("popstate", (e) => {
   const state = e.state ? e.state.modal : null;
 
   if (state !== "lightbox") lightboxModal.classList.remove("show");
+  if (state !== "staging") closeStagingArea();
 
   if (state !== "gallery" && state !== "lightbox") {
     galleryModal.classList.remove("show-modal");
     setTimeout(() => {
-      if (!galleryModal.classList.contains("show-modal")) {
+      if (!galleryModal.classList.contains("show-modal"))
         galleryContent.innerHTML = "";
-      }
     }, 400);
   }
 
@@ -91,12 +116,19 @@ window.addEventListener("popstate", (e) => {
   ) {
     drawerOverlay.classList.remove("show");
   }
+
+  // Restore the Top UI when returning to the map
+  if (state !== "gallery" && state !== "lightbox" && state !== "staging") {
+    if (topUiLayer) {
+      topUiLayer.style.transform = "translateY(0)";
+      topUiLayer.style.opacity = "1";
+    }
+  }
 });
 
 // --- 1. INITIAL LOAD ---
 function initApp() {
   const bounds = L.latLngBounds(L.latLng(-89.9, -180), L.latLng(89.9, 180));
-
   map = L.map("map", {
     center: [22.5937, 78.9629],
     zoom: 4,
@@ -105,50 +137,41 @@ function initApp() {
     minZoom: 2,
     zoomControl: false,
   });
-
   L.control.zoom({ position: "bottomright" }).addTo(map);
 
   L.tileLayer(
     "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
     {
-      attribution: '&copy; <a href="https://carto.com/">Carto</a>',
+      attribution: "&copy; Carto",
       maxZoom: 20,
       keepBuffer: 8,
       updateWhenIdle: true,
-      detectRetina: false,
     },
   ).addTo(map);
 
   fetch("/static/india.geojson")
-    .then((response) => {
-      if (!response.ok) throw new Error("Failed to fetch GeoJSON");
-      return response.json();
-    })
-    .then((data) => {
+    .then((res) => res.json())
+    .then((data) =>
       L.geoJSON(data, {
-        style: { color: "#a3a3a3", weight: 1, opacity: 0.8, fillOpacity: 0 },
+        style: { color: "#a3a3a3", weight: 1, fillOpacity: 0 },
         interactive: false,
-      }).addTo(map);
-    })
-    .catch((err) => console.log("Could not load border overlay: ", err));
+      }).addTo(map),
+    )
+    .catch((err) => console.log("Border err:", err));
 
   markersLayer = L.layerGroup().addTo(map);
   fetchAllPins();
-
-  // Start silently fetching GPS on load so it's ready when they need it
   fetchSilentGPS();
 }
 
 function fetchSilentGPS() {
   if (navigator.geolocation && !currentUserLat) {
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        currentUserLat = position.coords.latitude;
-        currentUserLon = position.coords.longitude;
+      (pos) => {
+        currentUserLat = pos.coords.latitude;
+        currentUserLon = pos.coords.longitude;
       },
-      () => {
-        console.log("Silent GPS fetch denied or failed.");
-      },
+      () => {},
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
   }
@@ -157,23 +180,18 @@ function fetchSilentGPS() {
 async function fetchAllPins() {
   try {
     const response = await fetch(`${API_BASE}/pins`);
-    if (!response.ok) throw new Error("Failed to fetch pins");
     const pins = await response.json();
     markersLayer.clearLayers();
 
-    const today = new Date();
-    const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const todayString = new Date().toISOString().split("T")[0];
 
     pins.forEach((pin) => {
       let isToday = false;
-
       if (pin.last_upload_at) {
         const safeDateStr =
           pin.last_upload_at.replace(" ", "T") +
           (pin.last_upload_at.endsWith("Z") ? "" : "Z");
-        const uploadDate = new Date(safeDateStr);
-        const uploadDateString = `${uploadDate.getFullYear()}-${String(uploadDate.getMonth() + 1).padStart(2, "0")}-${String(uploadDate.getDate()).padStart(2, "0")}`;
-        if (uploadDateString === todayString) isToday = true;
+        if (safeDateStr.split("T")[0] === todayString) isToday = true;
       }
 
       const pinClass = isToday ? "today-pin" : "premium-pin";
@@ -187,86 +205,26 @@ async function fetchAllPins() {
       const marker = L.marker([parseFloat(pin.lat), parseFloat(pin.lon)], {
         icon: dynamicIcon,
       });
-
       marker.on("click", () => {
-        const currentZoom = map.getZoom();
-        const streetLevelZoom = 18;
-        if (currentZoom < streetLevelZoom) {
-          map.flyTo([pin.lat, pin.lon], streetLevelZoom, {
-            duration: 0.8,
-            easeLinearity: 0.25,
-          });
-        } else {
-          openGallery(pin.id);
-        }
+        if (map.getZoom() < 18)
+          map.flyTo([pin.lat, pin.lon], 18, { duration: 0.8 });
+        else openGallery(pin.id);
       });
-
       markersLayer.addLayer(marker);
     });
   } catch (error) {
-    console.error("Error fetching pins:", error);
+    console.error("Pin err:", error);
   }
 }
 
-// --- 2. BRAND MENU LOGIC (SIDE DRAWER) ---
-if (brandToggle && sideMenu) {
-  const searchContainer = document.querySelector(".glass-search-container");
-
-  brandToggle.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const isOpen = sideMenu.classList.contains("show");
-
-    if (isOpen) {
-      sideMenu.classList.remove("show");
-      brandToggle.classList.remove("open");
-      drawerOverlay.classList.remove("show");
-
-      if (searchContainer) {
-        searchContainer.style.opacity = "1";
-        searchContainer.style.pointerEvents = "auto";
-      }
-    } else {
-      sideMenu.classList.add("show");
-      brandToggle.classList.add("open");
-      drawerOverlay.classList.add("show");
-
-      if (searchContainer) {
-        searchContainer.style.opacity = "0";
-        searchContainer.style.pointerEvents = "none";
-      }
-    }
-  });
-
-  drawerOverlay.addEventListener("click", () => {
-    if (sideMenu.classList.contains("show")) {
-      sideMenu.classList.remove("show");
-      brandToggle.classList.remove("open");
-      drawerOverlay.classList.remove("show");
-
-      if (searchContainer) {
-        searchContainer.style.opacity = "1";
-        searchContainer.style.pointerEvents = "auto";
-      }
-    }
-  });
-}
-
-// --- 3. INSTANT UPLOAD DRAWER LOGIC ---
-uploadBtn.addEventListener("click", () => {
-  if (isNetworkSlow())
-    showToast("Weak signal detected. Uploads may take a while.");
-
-  // Open instantly (No more waiting for GPS!)
+// --- 2. UPLOAD FLOW: DRAWER & SELECTION ---
+mainCaptureBtn.addEventListener("click", () => {
+  if (isNetworkSlow()) showToast("Weak signal detected.");
   history.pushState({ modal: "upload" }, "");
   uploadSheet.classList.add("show");
   drawerOverlay.classList.add("show");
-
-  // Trigger a background GPS fetch just in case they haven't gotten one yet
   fetchSilentGPS();
 });
-
-// --- 4. ACTION SHEET ROUTING & CLOSING ---
-let uploadSource = "";
 
 btnCamera.addEventListener("click", () => {
   uploadSource = "camera";
@@ -276,154 +234,332 @@ btnGallery.addEventListener("click", () => {
   uploadSource = "gallery";
   fileInputGallery.click();
 });
-uploadHandle.addEventListener("click", () => {
-  history.back();
-});
+
+document
+  .getElementById("upload-handle")
+  .addEventListener("click", () => history.back());
 drawerOverlay.addEventListener("click", () => {
   if (uploadSheet.classList.contains("show")) history.back();
+  if (sideMenu.classList.contains("show")) brandToggle.click();
 });
 
-// --- 5. MASTER FILE HANDLING (THE BRAIN) ---
-const handleFileSelection = async (event) => {
-  let file = event.target.files[0];
-  if (!file) {
-    showToast("No photo detected. Please try again.", true);
+// --- 3. UPLOAD FLOW: STAGING AREA (PREVIEW) ---
+const handleFileSelection = (e) => {
+  selectedFile = e.target.files[0];
+  if (!selectedFile) return;
+
+  selectedType =
+    document.querySelector('input[name="capture_type"]:checked')?.value ||
+    "sun";
+
+  history.replaceState({ modal: "staging" }, "");
+
+  // Manually hide drawer
+  uploadSheet.classList.remove("show");
+  drawerOverlay.classList.remove("show");
+
+  // Show Staging Area
+  stagingArea.classList.add("show");
+
+  // Hide Map UI
+  if (topUiLayer) {
+    topUiLayer.style.transition =
+      "transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease";
+    topUiLayer.style.transform = "translateY(-150%)";
+    topUiLayer.style.opacity = "0";
+  }
+
+  // --- THE FIX: HEIC / HEIF Visual Preview Handler ---
+  const fileExt = selectedFile.name.split(".").pop().toLowerCase();
+
+  // Completely hide the image element while processing so no text/broken icons show
+  stagingImg.removeAttribute("src");
+  stagingImg.style.opacity = "0";
+
+  if (
+    (fileExt === "heic" || fileExt === "heif") &&
+    typeof heic2any !== "undefined"
+  ) {
+    heic2any({
+      blob: selectedFile,
+      toType: "image/jpeg",
+      quality: 0.5,
+    })
+      .then((conversionResult) => {
+        stagingImg.src = URL.createObjectURL(conversionResult);
+        stagingImg.style.opacity = "1";
+      })
+      .catch((err) => {
+        stagingImg.style.opacity = "1";
+      });
+  } else {
+    stagingImg.src = URL.createObjectURL(selectedFile);
+    stagingImg.style.opacity = "1";
+  }
+
+  // Setup Rest of Preview UI
+  stagingBadge.innerHTML =
+    selectedType === "moon"
+      ? svgMoon
+      : svgSun;
+
+  const dateStr = new Date().toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  stagingDatePill.innerText = dateStr;
+
+  finalDate = new Date().toISOString();
+  finalLat = null;
+  finalLon = null;
+
+  processExif();
+};
+
+fileInputCamera.addEventListener("change", handleFileSelection);
+fileInputGallery.addEventListener("change", handleFileSelection);
+
+async function processExif() {
+  // Hide initially while processing
+  manualSearchWrapper.style.display = "none";
+  btnShareMap.style.display = "none";
+  btnShareMap.disabled = true;
+
+  try {
+    const exifData = await exifr.parse(selectedFile);
+    if (exifData && exifData.latitude && exifData.longitude) {
+      finalLat = exifData.latitude;
+      finalLon = exifData.longitude;
+
+      if (exifData.DateTimeOriginal) {
+        finalDate = exifData.DateTimeOriginal.toISOString();
+        const exifDateStr = exifData.DateTimeOriginal.toLocaleString(
+          undefined,
+          {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          },
+        );
+        stagingDatePill.innerText = exifDateStr;
+      }
+
+      // Reverse Geocoding
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${finalLat}&lon=${finalLon}`,
+        );
+        const data = await res.json();
+        if (data && data.display_name) {
+          manualSearch.value = data.display_name
+            .split(",")
+            .slice(0, 3)
+            .join(",");
+          // THE FIX: Unhide the search bar now that it has text in it
+          manualSearchWrapper.style.display = "flex";
+        }
+      } catch (err) {
+        console.error("Reverse geocoding failed:", err);
+      }
+
+      // Setup Button
+      btnShareMap.style.display = "flex";
+      btnShareMap.disabled = false;
+      btnShareMap.innerText = "Upload Here";
+    } else {
+      triggerFallbackLocation();
+    }
+  } catch (err) {
+    triggerFallbackLocation();
+  }
+}
+
+function triggerFallbackLocation() {
+  if (uploadSource === "camera" && currentUserLat && currentUserLon) {
+    finalLat = currentUserLat;
+    finalLon = currentUserLon;
+    btnShareMap.style.display = "flex";
+    btnShareMap.disabled = false;
+    btnShareMap.innerText = "Upload Here";
+  } else {
+    showToast("No location found in photo.", true);
+    manualSearchWrapper.style.display = "flex";
+    manualSearch.value = "";
+    manualSearchResults.innerHTML = "";
+    manualSearchResults.classList.remove("show");
+    btnShareMap.style.display = "flex";
+    btnShareMap.disabled = true;
+    btnShareMap.innerText = "Select a location first";
+  }
+}
+
+// --- LIVE AUTOCOMPLETE FOR PREVIEW SEARCH ---
+let stagingSearchTimeout;
+manualSearch.addEventListener("input", (e) => {
+  const query = e.target.value.trim();
+  clearTimeout(stagingSearchTimeout);
+  manualSearchResults.innerHTML = "";
+
+  // Wipe final location while they are typing to prevent accidental uploads
+  finalLat = null;
+  finalLon = null;
+  btnShareMap.disabled = true;
+  btnShareMap.innerText = "Select a location...";
+
+  if (query.length < 3) {
+    manualSearchResults.classList.remove("show");
     return;
   }
 
-  // Close the drawer immediately
-  if (uploadSheet.classList.contains("show")) history.back();
+  stagingSearchTimeout = setTimeout(async () => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`,
+      );
+      const data = await res.json();
+      manualSearchResults.innerHTML = "";
 
-  uploadBtn.innerText = "Preparing upload...";
-  uploadBtn.disabled = true;
-  await new Promise((resolve) => setTimeout(resolve, 50));
-
-  let finalLat = null;
-  let finalLon = null;
-  let finalTime = new Date().toISOString();
-
-  // STEP 1: Attempt EXIF extraction (Gallery Only)
-  try {
-    if (uploadSource === "gallery" && typeof exifr !== "undefined") {
-      const exifData = await exifr.parse(file);
-      if (exifData) {
-        if (exifData.latitude && exifData.longitude) {
-          finalLat = exifData.latitude;
-          finalLon = exifData.longitude;
-        }
-        if (exifData.DateTimeOriginal) {
-          finalTime = exifData.DateTimeOriginal.toISOString();
-        }
+      if (data.length === 0) {
+        manualSearchResults.innerHTML = `<div class="search-result-item" style="color: #aaa; text-align:center;">No places found</div>`;
+        manualSearchResults.classList.add("show");
+        return;
       }
+
+      data.forEach((place) => {
+        const item = document.createElement("div");
+        item.className = "search-result-item";
+        item.innerText = place.display_name.split(",").slice(0, 3).join(",");
+
+        item.addEventListener("click", () => {
+          finalLat = parseFloat(place.lat);
+          finalLon = parseFloat(place.lon);
+          manualSearch.value = item.innerText;
+          manualSearchResults.classList.remove("show");
+
+          btnShareMap.style.display = "flex";
+          btnShareMap.disabled = false;
+          btnShareMap.innerText = "Upload Here";
+        });
+        manualSearchResults.appendChild(item);
+      });
+      manualSearchResults.classList.add("show");
+    } catch (err) {
+      console.error(err);
     }
-  } catch (error) {
-    console.log("No EXIF data found.");
+  }, 500);
+});
+
+// --- 4. UPLOAD FLOW: EXECUTE UPLOAD ---
+btnShareMap.addEventListener("click", async () => {
+  if (!finalLat || !finalLon) {
+    showToast("Please provide a valid location.", true);
+    return;
   }
 
-  // STEP 2: Fallback Logic if EXIF failed (or if it's a Live Camera shot)
-  if (finalLat === null || finalLon === null) {
-    if (uploadSource === "camera") {
-      // Camera MUST use live GPS
-      if (currentUserLat && currentUserLon) {
-        finalLat = currentUserLat;
-        finalLon = currentUserLon;
-      } else {
-        showToast("Live location required for camera captures.", true);
-        uploadBtn.innerText = `Capture`;
-        uploadBtn.disabled = false;
-        fileInputCamera.value = "";
-        return; // Abort the upload
-      }
-    } else if (uploadSource === "gallery") {
-      // Gallery with NO EXIF: Use the center of the map!
-      const mapCenter = map.getCenter();
-      finalLat = mapCenter.lat;
-      finalLon = mapCenter.lng;
-      showToast("No GPS found in photo. Using current map location.");
-    }
-  }
+  btnShareMap.innerText = "Uploading...";
+  btnShareMap.disabled = true;
 
-  // Final Data Assembly
   const formData = new FormData();
-  formData.append("image", file);
+  formData.append("image", selectedFile);
   formData.append("lat", finalLat);
   formData.append("lon", finalLon);
-  formData.append("captured_at", finalTime);
-  const selectedType =
-    document.querySelector('input[name="capture_type"]:checked')?.value ||
-    "sun";
+  formData.append("captured_at", finalDate);
   formData.append("capture_type", selectedType);
 
-  // STEP 3: Execute Upload
   try {
-    const response = await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", `${API_BASE}/upload`);
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const percent = Math.round((event.loaded / event.total) * 100);
-          uploadBtn.innerText = `Uploading... ${percent}%`;
-          uploadBtn.style.setProperty(
-            "background",
-            `linear-gradient(to right, #ff5e3a ${percent}%, rgba(255, 255, 255, 0.3) ${percent}%)`,
-            "important",
-          );
-          uploadBtn.style.setProperty(
-            "border-color",
-            "transparent",
-            "important",
-          );
-          uploadBtn.style.setProperty("color", "white", "important");
-        }
-      };
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300)
-          resolve(JSON.parse(xhr.responseText));
-        else reject({ error: "Server error" });
-      };
-      xhr.onerror = () => reject({ error: "Network disconnected" });
-      xhr.send(formData);
-    });
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${API_BASE}/upload`);
+    
+    const originalBackground = btnShareMap.style.background;
 
-    await fetchAllPins();
-    map.flyTo([finalLat, finalLon], 16, {
-      animate: true,
-      duration: 1.5,
-      easeLinearity: 0.25,
-    });
-    showToast(
-      `${selectedType === "moon" ? "Night sky" : "Evening"} archived successfully.`,
-    );
-  } catch (errorData) {
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percent = Math.round((event.loaded / event.total) * 100);
+        btnShareMap.innerText = `Uploading... ${percent}%`;
+        btnShareMap.style.backgroundImage = `linear-gradient(to right, rgba(255, 94, 58, 0.9) ${percent}%, rgba(255, 255, 255, 0.1) ${percent}%)`;
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        showToast("Archived successfully.");
+        fetchAllPins();
+        map.flyTo([finalLat, finalLon], 16, { animate: true, duration: 1.5 });
+        setTimeout(() => {
+          stagingArea.classList.remove("show");
+          if (topUiLayer) {
+            topUiLayer.style.transform = "translateY(0)";
+            topUiLayer.style.opacity = "1";
+          }
+        }, 1000);
+      } else {
+        showToast("Upload failed.", true);
+        btnShareMap.style.backgroundImage = "";
+      }
+    };
+    xhr.onerror = () => {
+      showToast("Network error.", true);
+      btnShareMap.style.backgroundImage = "";
+    };
+    xhr.send(formData);
+  } catch (error) {
     showToast("Upload failed.", true);
-  } finally {
-    uploadBtn.style.removeProperty("background");
-    uploadBtn.style.removeProperty("border-color");
-    uploadBtn.style.removeProperty("color");
-    uploadBtn.innerText = `Capture`;
-    uploadBtn.disabled = false;
-    fileInputCamera.value = "";
-    fileInputGallery.value = "";
-    uploadSource = "";
+    btnShareMap.style.backgroundImage = "";
   }
-};
+});
 
-fileInputGallery.addEventListener("change", handleFileSelection);
-fileInputCamera.addEventListener("change", handleFileSelection);
+function resetShareBtn() {
+  btnShareMap.innerText = "Share to Map";
+  btnShareMap.disabled = false;
+  btnShareMap.style.background = "";
+}
 
-// --- 6. GALLERY VIEW & LIGHTBOX LOGIC ---
+function closeStagingArea() {
+  stagingArea.classList.remove("show");
+
+  if (
+    topUiLayer &&
+    !galleryModal.classList.contains("show-modal") &&
+    !lightboxModal.classList.contains("show")
+  ) {
+    topUiLayer.style.transform = "translateY(0)";
+    topUiLayer.style.opacity = "1";
+  }
+
+  selectedFile = null;
+  fileInputCamera.value = "";
+  fileInputGallery.value = "";
+  manualSearch.value = "";
+  manualSearchResults.innerHTML = "";
+  manualSearchResults.classList.remove("show");
+  resetShareBtn();
+}
+
+closeStagingBtn.addEventListener("click", () => history.back());
+
+// --- 5. GALLERY VIEW & LIGHTBOX LOGIC ---
 async function openGallery(pinId) {
   history.pushState({ modal: "gallery" }, "");
   galleryModal.classList.add("show-modal");
+
+  if (topUiLayer) {
+    topUiLayer.style.transition =
+      "transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease";
+    topUiLayer.style.transform = "translateY(-150%)";
+    topUiLayer.style.opacity = "0";
+  }
+
   galleryContent.innerHTML = "";
   galleryLoading.style.display = "flex";
-  galleryLoading.className = "fill-loader";
   galleryLoading.classList.remove("fade-out");
   galleryLoading.innerHTML = `<div class="orbiting-ember"></div>`;
 
   try {
     const response = await fetch(`${API_BASE}/pins/${pinId}`);
-    if (!response.ok) throw new Error("Failed to fetch gallery");
+    if (!response.ok) throw new Error("Fetch failed");
     const images = await response.json();
 
     galleryLoading.classList.add("fade-out");
@@ -444,9 +580,13 @@ async function openGallery(pinId) {
       card.style.animationDelay = `${index * 0.1}s`;
       card.onclick = () => openLightbox(index);
 
+      // SVG Badge Injection
       const typeBadge = document.createElement("div");
       typeBadge.className = "type-badge";
-      typeBadge.innerText = img.capture_type === "moon" ? "🌙" : "☀️";
+      typeBadge.style.display = "flex";
+      typeBadge.style.alignItems = "center";
+      typeBadge.style.justifyContent = "center";
+      typeBadge.innerHTML = img.capture_type === "moon" ? svgMoon : svgSun;
 
       const imgElement = document.createElement("img");
       imgElement.src = img.file_path;
@@ -559,7 +699,32 @@ lightboxModal.addEventListener(
   false,
 );
 
-// --- 7. SYSTEM-WIDE DARK MODE TOGGLE LOGIC ---
+// --- 6. BRAND MENU & SYSTEM DARK MODE ---
+if (brandToggle && sideMenu) {
+  const searchContainer = document.querySelector(".glass-search-container");
+
+  brandToggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (sideMenu.classList.contains("show")) {
+      sideMenu.classList.remove("show");
+      brandToggle.classList.remove("open");
+      drawerOverlay.classList.remove("show");
+      if (searchContainer) {
+        searchContainer.style.opacity = "1";
+        searchContainer.style.pointerEvents = "auto";
+      }
+    } else {
+      sideMenu.classList.add("show");
+      brandToggle.classList.add("open");
+      drawerOverlay.classList.add("show");
+      if (searchContainer) {
+        searchContainer.style.opacity = "0";
+        searchContainer.style.pointerEvents = "none";
+      }
+    }
+  });
+}
+
 function initThemeLogic() {
   const themeToggle = document.getElementById("theme-toggle");
   const body = document.body;
@@ -600,9 +765,8 @@ function initThemeLogic() {
 
     if (sideMenu) sideMenu.classList.remove("show");
     if (brandToggle) brandToggle.classList.remove("open");
-    if (drawerOverlay && !uploadSheet.classList.contains("show")) {
+    if (drawerOverlay && !uploadSheet.classList.contains("show"))
       drawerOverlay.classList.remove("show");
-    }
 
     const searchContainer = document.querySelector(".glass-search-container");
     if (searchContainer) {
@@ -618,7 +782,7 @@ function initThemeLogic() {
     });
 }
 
-// --- 8. GLOBAL MAP SEARCH LOGIC (TOP NAVIGATION) ---
+// --- 7. GLOBAL MAP SEARCH LOGIC (TOP NAVIGATION) ---
 if (globalSearchInput) {
   globalSearchInput.addEventListener("input", (e) => {
     const query = e.target.value.trim();
@@ -652,7 +816,6 @@ if (globalSearchInput) {
           item.addEventListener("click", () => {
             const lat = parseFloat(place.lat);
             const lon = parseFloat(place.lon);
-
             globalSearchInput.value = "";
             globalSearchResults.classList.remove("show");
             globalSearchInput.blur();
@@ -666,12 +829,13 @@ if (globalSearchInput) {
         });
         globalSearchResults.classList.add("show");
       } catch (error) {
-        console.error("Global search error:", error);
+        console.error("Search error:", error);
       }
     }, 500);
   });
 }
 
+// Global click-outside listener to close BOTH search dropdowns
 document.addEventListener("click", (e) => {
   if (
     globalSearchInput &&
@@ -680,18 +844,18 @@ document.addEventListener("click", (e) => {
   ) {
     globalSearchResults.classList.remove("show");
   }
+  if (
+    manualSearch &&
+    e.target !== manualSearch &&
+    !manualSearchResults.contains(e.target)
+  ) {
+    manualSearchResults.classList.remove("show");
+  }
 });
 
 // --- AUTO-REFRESH ON WAKE ---
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") {
-    if (
-      uploadBtn.innerText === "Capture" &&
-      !uploadSheet.classList.contains("show")
-    ) {
-      fetchAllPins();
-    }
-  }
+  if (document.visibilityState === "visible") fetchAllPins();
 });
 
 window.onload = () => {

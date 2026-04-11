@@ -18,9 +18,10 @@
       src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js"
       defer
     ></script>
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js" defer></script>
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='style.css') }}?v=42"
+      href="{{ url_for('static', filename='style.css') }}?v=55"
     />
 
     <link rel="manifest" href="/manifest.json" />
@@ -109,6 +110,12 @@
     </div>
 
     <div id="drawer-overlay" class="drawer-overlay"></div>
+
+    <div id="map"></div>
+
+    <button class="upload-btn" id="main-capture-btn" aria-label="Capture the sky">
+      Capture
+    </button>
 
     <div
       id="upload-sheet"
@@ -262,12 +269,6 @@
       </button>
     </div>
 
-    <div id="map"></div>
-
-    <button class="upload-btn" id="upload-btn" aria-label="Capture the sky">
-      Capture
-    </button>
-
     <input
       type="file"
       id="file-input-gallery"
@@ -281,6 +282,35 @@
       capture="environment"
       style="display: none"
     />
+
+    <div id="staging-area" class="staging-area">
+      <div class="staging-top-bar">
+        <span class="staging-close" id="close-staging">&times;</span>
+        <span class="staging-title">Preview</span>
+      </div>
+      
+      <div class="staging-content">
+        <div class="staging-right-panel">
+            <div id="manual-search-wrapper" class="glass-search-container" style="display: none;">
+              <span class="search-icon">
+                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </span>
+              <input type="text" id="manual-search" placeholder="Search city or location..." autocomplete="off" />
+              <div id="manual-search-results" class="search-results"></div>
+            </div>
+            
+            <button class="action-btn primary-btn" id="btn-share-map" style="background-color: var(--accent); color: white; border: none; display: none;">Share to Map</button>
+        </div>
+        
+        <div class="preview-img-container">
+          <img id="staging-img" src="">
+          <div class="preview-badge" id="staging-badge" style="display: flex; align-items: center; gap: 6px;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          </div>
+          <div class="preview-date-pill" id="staging-date-pill"></div>
+        </div>
+      </div>
+    </div>
 
     <div id="gallery-modal">
       <span
@@ -332,7 +362,7 @@
       defer
     ></script>
     <script
-      src="{{ url_for('static', filename='script.js') }}?v=42"
+      src="{{ url_for('static', filename='script.js') }}?v=55"
       defer
     ></script>
 
