@@ -11,3 +11,5 @@ wheels/
 .env
 
 upgrade.py
+
+static/script_backup.js
