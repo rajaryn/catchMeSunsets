@@ -420,6 +420,42 @@
       <div id="lightbox-date" class="lightbox-date"></div>
     </div>
 
+    <div id="moment-modal" class="moment-modal">
+      <button class="moment-close-btn" id="moment-close-btn" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <div id="moment-slider" class="moment-slider"></div>
+      <div class="moment-loader" id="moment-loader">
+        <div class="moment-spinner"></div>
+      </div>
+      <div class="moment-overlay">
+        <div class="moment-info">
+          <div class="moment-header">
+            <h2 id="moment-location" class="moment-location"></h2>
+            <div id="moment-live-badge" class="moment-live-badge" style="display: none;">
+              <span class="live-dot"></span>
+              <span>Live</span>
+            </div>
+          </div>
+          <p id="moment-time" class="moment-time"></p>
+          <p id="moment-more-text" class="moment-more-text" style="display: none;"></p>
+        </div>
+      </div>
+      <div class="moment-thumbnails" id="moment-thumbnails"></div>
+    </div>
+
+    <div id="moment-gallery-sheet" class="moment-gallery-sheet">
+      <div class="gallery-sheet-handle" id="moment-gallery-close"></div>
+      <div class="gallery-sheet-header">
+        <h3>All Moments</h3>
+        <p class="gallery-sheet-subtitle">Tap to view</p>
+      </div>
+      <div class="gallery-sheet-grid" id="moment-gallery-grid"></div>
+    </div>
+
     <div id="toast" class="toast">
       <span class="toast-icon"></span>
       <span id="toast-message"></span>
@@ -429,6 +465,11 @@
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
       defer
     ></script>
+    <script
+      src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"
+      defer
+    ></script>
+    <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script
       src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"
       defer

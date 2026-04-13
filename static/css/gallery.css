@@ -1,8 +1,7 @@
 /* ==============================================
-   GALLERY & LIGHTBOX
+   GALLERY & LIGHTBOX (Legacy map grid styles)
    ============================================== */
 
-/* --- GALLERY MODAL --- */
 #gallery-modal {
     position: fixed;
     top: 0;
@@ -47,7 +46,6 @@
     }
 }
 
-/* --- IMAGE CARDS --- */
 .image-card {
     display: inline-block;
     width: 100%;
@@ -83,7 +81,6 @@
     background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    border: 1px solid transparent;
     padding: 6px 8px;
     border-radius: 15px;
     font-size: 0.85rem;
@@ -105,9 +102,7 @@
     border-radius: 20px;
     font-size: 0.75rem;
     font-weight: 600;
-    letter-spacing: 0.5px;
     pointer-events: none;
-    transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
     border: 1px solid transparent;
 }
 
@@ -118,18 +113,7 @@
     }
 }
 
-body.dark-mode .type-badge {
-    background: rgba(0, 0, 0, 0.5);
-    border-color: rgba(255, 255, 255, 0.15);
-}
-
-body.dark-mode .image-date {
-    background: rgba(0, 0, 0, 0.5);
-    color: #e0e0e0;
-    border-color: rgba(255, 255, 255, 0.15);
-}
-
-/* --- LIGHTBOX MODAL --- */
+/* Lightbox Modal */
 .lightbox {
     visibility: hidden;
     opacity: 0;
@@ -186,13 +170,6 @@ body.dark-mode .image-date {
     transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
-body.dark-mode .lightbox-date {
-    background: rgba(0, 0, 0, 0.6);
-    color: #e0e0e0;
-    border-color: rgba(255, 255, 255, 0.15);
-}
-
-/* --- LIGHTBOX CONTROLS --- */
 .nav-btn,
 .close-btn,
 .lightbox-close {
@@ -252,11 +229,19 @@ body.dark-mode .lightbox-date {
     box-shadow: 0 6px 20px rgba(255, 94, 58, 0.4);
 }
 
-.nav-btn:hover {
-    transform: translateY(-50%) scale(1.1);
+body.dark-mode .type-badge,
+body.dark-mode .image-date {
+    background: rgba(0, 0, 0, 0.5);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #e0e0e0;
 }
 
-/* Gallery Mobile Tweaks */
+body.dark-mode .lightbox-date {
+    background: rgba(0, 0, 0, 0.6);
+    color: #e0e0e0;
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
 @media (max-width: 768px) {
 
     .nav-btn,
@@ -274,5 +259,351 @@ body.dark-mode .lightbox-date {
     .type-badge {
         font-size: 0.75rem;
         padding: 4px 6px;
+    }
+}
+
+/* ==============================================
+   MOMENT VIEW - IMMERSIVE FULLSCREEN 
+   ============================================== */
+.moment-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    z-index: 4000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), visibility 0.4s;
+    overflow: hidden;
+}
+
+.moment-modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* --- YOUTUBE-STYLE BACKGROUND BLUR --- */
+.moment-bg-blur {
+    position: absolute;
+    top: -10%;
+    left: -10%;
+    width: 120%;
+    height: 120%;
+    background-size: cover;
+    background-position: center;
+    filter: blur(50px) brightness(0.4) saturate(1.5);
+    z-index: 0;
+    transition: background-image 0.6s ease-in-out;
+}
+
+/* --- JS-DRIVEN SLIDER TRACK --- */
+.moment-slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    z-index: 2;
+    will-change: transform;
+    /* Transition is added dynamically in JS for snaps */
+}
+
+.moment-slide {
+    flex: 0 0 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 0 5vw;
+    opacity: 0.4;
+    transform: scale(0.9);
+    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.moment-slide.active {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.moment-slide img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* --- THE OVERLAY & INFO --- */
+.moment-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%);
+    z-index: 10;
+    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    pointer-events: none;
+}
+
+.moment-info {
+    padding: 80px 24px 40px 24px;
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Base text styles */
+.moment-location {
+    color: #ffffff;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.02em;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.moment-time {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 1rem;
+    margin: 8px 0 0 0;
+    cursor: pointer;
+    pointer-events: auto;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.moment-capture-type {
+    color: rgba(255, 255, 255, 0.55);
+    font-weight: 300;
+}
+
+.moment-date {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+}
+
+.moment-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Badges & Buttons */
+.moment-live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 94, 58, 0.95);
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    box-shadow: 0 2px 12px rgba(255, 94, 58, 0.6);
+    animation: livePulse 2s ease-in-out infinite;
+}
+
+.live-dot {
+    width: 6px;
+    height: 6px;
+    background: #fff;
+    border-radius: 50%;
+    animation: liveDotBlink 1.5s infinite;
+}
+
+@keyframes liveDotBlink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+}
+
+.moment-close-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    transition: all 0.3s ease;
+    pointer-events: auto;
+}
+
+.moment-loader {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    z-index: 5;
+    transition: opacity 0.4s ease;
+}
+
+.moment-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.15);
+    border-top-color: #ff5e3a;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* --- THUMBNAIL STRIP (DESKTOP ONLY) --- */
+.moment-thumbnails {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px;
+    z-index: 15;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    pointer-events: auto;
+    transition: opacity 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.moment-thumbnails::-webkit-scrollbar {
+    display: none;
+}
+
+.thumbnail-item {
+    flex: 0 0 auto;
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.3s ease, border-color 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.thumbnail-item.active {
+    opacity: 1;
+    border-color: #ffffff;
+}
+
+.thumbnail-item:hover {
+    opacity: 0.9;
+}
+
+.thumbnail-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ==============================================
+   STATE 2: EXPANDED VIEWER MODIFIERS
+   ============================================== */
+.moment-modal.expanded .moment-overlay {
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+.moment-modal.expanded .moment-close-btn {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.8);
+    pointer-events: none;
+}
+
+.moment-modal.expanded .moment-slide.active img {
+    /* Push in for deep focus */
+    transform: scale(1.02);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
+}
+
+/* Hide Thumbnails smoothly when expanded */
+.moment-modal.expanded .moment-thumbnails {
+    opacity: 0;
+    transform: translateY(30px);
+    pointer-events: none;
+}
+
+/* Desktop & Mobile Responsive Tweaks */
+@media (min-width: 769px) {
+    .moment-location {
+        font-size: 2rem;
+    }
+
+    .moment-time {
+        font-size: 1.1rem;
+    }
+
+    .moment-close-btn {
+        top: 30px;
+        right: 30px;
+        width: 48px;
+        height: 48px;
+    }
+
+    /* Extra padding so text clears the thumbnail strip */
+    .moment-info {
+        padding: 100px 40px 100px 40px;
+    }
+}
+
+@media (max-width: 768px) {
+    .moment-location {
+        font-size: 1.25rem;
+    }
+
+    .moment-time {
+        font-size: 0.9rem;
+    }
+
+    .moment-live-badge {
+        padding: 3px 10px;
+        font-size: 0.7rem;
+    }
+
+    .moment-close-btn {
+        top: 15px;
+        right: 15px;
+        width: 40px;
+        height: 40px;
+    }
+
+    .moment-info {
+        padding: 60px 20px 30px 20px;
+    }
+
+    /* Ensure thumbnails are entirely removed from mobile flow */
+    .moment-thumbnails {
+        display: none;
     }
 }

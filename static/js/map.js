@@ -1,7 +1,7 @@
 // Map initialization and core pin data loading.
 
 import { API_BASE } from "./constants.js";
-import { openGallery } from "./gallery.js";
+import { openMomentView } from "./moment-view.js";
 
 export let map;
 export let markersLayer;
@@ -116,9 +116,11 @@ export async function fetchAllPins() {
       });
       marker.isTodayPin = isToday;
       marker.on("click", () => {
-        if (map.getZoom() < 18)
+        if (map.getZoom() < 18) {
           map.flyTo([pin.lat, pin.lon], 18, { duration: 0.8 });
-        else openGallery(pin.id);
+        } else {
+          openMomentView(pin.id, pin.lat, pin.lon);
+        }
       });
       markersLayer.addLayer(marker);
     });
