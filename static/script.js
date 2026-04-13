@@ -160,7 +160,28 @@ function initApp() {
     )
     .catch((err) => console.log("Border err:", err));
 
-  markersLayer = L.layerGroup().addTo(map);
+  markersLayer = L.markerClusterGroup({
+    maxClusterRadius: 50,
+    disableClusteringAtZoom: 17,
+    showCoverageOnHover: false,
+    spiderfyOnMaxZoom: false,
+    zoomToBoundsOnClick: true,
+    iconCreateFunction: function(cluster) {
+      const count = cluster.getChildCount();
+      let intensityClass = 'cluster-low';
+      if (count >= 50) intensityClass = 'cluster-high';
+      else if (count >= 20) intensityClass = 'cluster-medium';
+      
+      const hasTodayPin = cluster.getAllChildMarkers().some(m => m.isTodayPin);
+      
+      return L.divIcon({
+        html: `<div class="custom-cluster ${intensityClass} ${hasTodayPin ? 'has-today' : ''}"><span>${count}</span></div>`,
+        className: 'cluster-wrapper',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+      });
+    },
+  }).addTo(map);
   fetchAllPins();
   fetchSilentGPS();
 }
@@ -215,6 +236,7 @@ async function fetchAllPins() {
       const marker = L.marker([parseFloat(pin.lat), parseFloat(pin.lon)], {
         icon: dynamicIcon,
       });
+      marker.isTodayPin = isToday;
       marker.on("click", () => {
         if (map.getZoom() < 18)
           map.flyTo([pin.lat, pin.lon], 18, { duration: 0.8 });

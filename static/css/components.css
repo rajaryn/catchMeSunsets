@@ -180,6 +180,7 @@ body.dark-mode .toast {
     border: 2px solid rgba(255, 94, 58, 0.9);
     animation: radarPulseActive 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
     pointer-events: none;
+    z-index: -1;
 }
 
 @keyframes radarPulseActive {
@@ -205,6 +206,61 @@ body.dark-mode .premium-pin {
 
 body.dark-mode .premium-pin:hover,
 body.dark-mode .today-pin:hover {
+    border-color: #ffffff;
+}
+
+/* --- CLUSTER STYLES --- */
+.cluster-wrapper {
+    background: transparent !important;
+    border: none !important;
+}
+
+.custom-cluster {
+    width: 35px;
+    height: 35px;
+    background-color: #ff5e3a;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 13px;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    cursor: pointer;
+}
+
+.custom-cluster:hover {
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px rgba(255, 94, 58, 0.4);
+}
+
+.custom-cluster.has-today::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 94, 58, 0.9);
+    animation: radarPulseActive 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.custom-cluster span {
+    z-index: 1;
+}
+
+body.dark-mode .custom-cluster {
+    border-color: #e0e0e0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+body.dark-mode .custom-cluster:hover {
     border-color: #ffffff;
 }
 

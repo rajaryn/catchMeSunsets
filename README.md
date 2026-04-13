@@ -106,4 +106,4 @@ uv export --format requirements-txt > requirements.txt
 The application uses `gunicorn` as the production WSGI server. Ensure your `Procfile` contains the following:
 ```plaintext
 web: gunicorn app:app
-```
+``` 
