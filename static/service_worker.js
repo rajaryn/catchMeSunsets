@@ -1,21 +1,49 @@
-const CACHE_NAME = "vesper-cache-v38";
-
+const CACHE_NAME = "vesper-cache-v41";
 
 const ASSETS_TO_CACHE = [
   "/",
   "/static/style.css",
-  "/static/script.js",
+
+  "/static/js/main.js",
+  "/static/js/map.js",
+  "/static/js/ui.js",
+  "/static/js/upload.js",
+  "/static/js/gallery.js",
+  "/static/js/utils.js",
+  "/static/js/constants.js",
+  "/static/js/moment-view.js",
+
   "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
   "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
 ];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
+    caches.open(CACHE_NAME).then(async (cache) => {
       console.log("Caching core assets...");
-      return cache
-        .addAll(ASSETS_TO_CACHE)
-        .catch((err) => console.error("Cache addAll failed:", err));
+
+      // Cache files individually so one failure doesn't break everything
+      const cachePromises = ASSETS_TO_CACHE.map(async (url) => {
+        try {
+          // Add { cache: 'reload' } to ensure we bypass browser cache during SW install
+          const request = new Request(url, { cache: "reload" });
+          const response = await fetch(request);
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+
+          await cache.put(request, response);
+          console.log(`Successfully cached: ${url}`);
+        } catch (err) {
+          console.error(
+            `Failed to cache specific asset (${url}):`,
+            err.message,
+          );
+        }
+      });
+
+      return Promise.all(cachePromises);
     }),
   );
   self.skipWaiting();

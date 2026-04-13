@@ -7,7 +7,7 @@ const momentSlider = document.getElementById("moment-slider");
 const momentLocation = document.getElementById("moment-location");
 const momentTime = document.getElementById("moment-time");
 const momentLiveBadge = document.getElementById("moment-live-badge");
-const momentCloseBtn = document.getElementById("moment-close-btn");
+const momentBackBtn = document.getElementById("moment-back-btn");
 const momentLoader = document.getElementById("moment-loader");
 const momentOverlay = document.querySelector(".moment-overlay");
 const momentThumbnails = document.getElementById("moment-thumbnails"); // Restored Desktop Strip
@@ -18,6 +18,8 @@ let currentImageIndex = 0;
 let isExpanded = false;
 let isDateExpanded = false;
 let bgBlurElement = null;
+let locationHideTimeout;
+let isFirstImage = true;
 
 export async function openMomentView(pinId, lat, lon) {
   if (!momentModal) return;
@@ -88,11 +90,17 @@ export async function openMomentView(pinId, lat, lon) {
     // Build the Desktop Thumbnail Strip
     if (momentThumbnails && images.length > 1) {
       renderThumbnails(images);
+      adjustThumbnailSize();
     } else if (momentThumbnails) {
       momentThumbnails.innerHTML = "";
     }
 
     goToImage(0); // Applies initial BG, UI, and Thumbnails
+
+    // Adjust overlay position based on first image dimensions
+    setTimeout(() => {
+      adjustOverlayForImage();
+    }, 500);
   } catch (error) {
     console.error("Moment view error:", error);
     closeMomentView();
@@ -116,6 +124,7 @@ function collapseViewer() {
 function goToImage(index) {
   currentImageIndex = index;
   currentMomentData = allImages[index];
+  isFirstImage = index === 0;
 
   // 1. Move Track Smoothly
   const tx = -index * window.innerWidth;
@@ -138,7 +147,18 @@ function goToImage(index) {
   // 4. Synchronize Desktop Thumbnail Strip
   syncThumbnails(index);
 
+  // 5. Handle Location Visibility - always show on first image
+  const momentHeader = document.querySelector(".moment-header");
+  if (momentHeader) {
+    if (isFirstImage && index === 0) {
+      momentHeader.style.opacity = "1";
+    } else {
+      momentHeader.style.opacity = "0";
+    }
+  }
+
   updateUiForCurrentImage();
+  adjustOverlayForImage();
 }
 
 // --- PHYSICS GESTURE ENGINE ---
@@ -161,7 +181,7 @@ if (momentModal) {
       // Ignore if clicking UI elements
       if (
         e.target.closest(".moment-info") ||
-        e.target.closest("#moment-close-btn") ||
+        e.target.closest("#moment-back-btn") ||
         e.target.closest(".moment-thumbnails")
       )
         return;
@@ -279,6 +299,29 @@ if (momentModal) {
 
 // --- DESKTOP THUMBNAIL LOGIC ---
 
+function adjustThumbnailSize() {
+  if (!momentThumbnails) return;
+
+  const thumbItems = momentThumbnails.querySelectorAll(".thumbnail-item");
+  const baseSize = Math.min(window.innerWidth, window.innerHeight);
+  let thumbSize;
+
+  if (baseSize > 1024) {
+    thumbSize = Math.max(60, Math.min(90, baseSize * 0.08));
+  } else if (baseSize > 768) {
+    thumbSize = Math.max(50, Math.min(70, baseSize * 0.07));
+  } else {
+    thumbSize = 60;
+  }
+
+  thumbItems.forEach((thumb) => {
+    thumb.style.width = `${thumbSize}px`;
+    thumb.style.height = `${thumbSize}px`;
+  });
+}
+
+window.addEventListener("resize", adjustThumbnailSize);
+
 function renderThumbnails(images) {
   if (!momentThumbnails) return;
   momentThumbnails.innerHTML = "";
@@ -302,6 +345,8 @@ function renderThumbnails(images) {
 
     momentThumbnails.appendChild(thumb);
   });
+
+  adjustThumbnailSize();
 }
 
 function syncThumbnails(index) {
@@ -324,6 +369,31 @@ function syncThumbnails(index) {
 
 // --- UI & DATA UTILITIES ---
 
+function adjustOverlayForImage() {
+  if (!currentMomentData || !momentOverlay) return;
+
+  const img = new Image();
+  img.src = currentMomentData.file_path;
+
+  img.onload = function () {
+    const aspectRatio = this.naturalWidth / this.naturalHeight;
+    const screenHeight = window.innerHeight;
+    const screenWidth = window.innerWidth;
+    const screenAspect = screenWidth / screenHeight;
+
+    let bottomPadding;
+    if (aspectRatio > screenAspect) {
+      bottomPadding = screenHeight * 0.15;
+    } else if (aspectRatio > 1) {
+      bottomPadding = screenHeight * 0.25;
+    } else {
+      bottomPadding = screenHeight * 0.2;
+    }
+
+    momentOverlay.style.paddingBottom = `${bottomPadding}px`;
+  };
+}
+
 function updateUiForCurrentImage() {
   if (!currentMomentData) return;
 
@@ -335,26 +405,13 @@ function updateUiForCurrentImage() {
     : safeDateString + "Z";
   const uploadDate = new Date(utcString);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const uploadDay = new Date(uploadDate);
-  uploadDay.setHours(0, 0, 0, 0);
-
-  if (today > uploadDay) {
-    isDateExpanded = true;
-    const smartDate = getSmartDate(currentMomentData.uploaded_at);
-    const timeStr = uploadDate.toLocaleString(undefined, {
-      hour: "numeric",
-      minute: "2-digit",
-    });
-    momentTime.innerHTML = `${timeStr} <span class="moment-capture-type">${captureType}</span> · <span class="moment-date">${smartDate}</span>`;
-  } else {
-    isDateExpanded = false;
-    momentTime.innerHTML = formatTimeDisplay(
-      currentMomentData.uploaded_at,
-      captureType,
-    );
-  }
+  // Always show date - no toggle functionality
+  const smartDate = getSmartDate(currentMomentData.uploaded_at);
+  const timeStr = uploadDate.toLocaleString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  momentTime.innerHTML = `${timeStr} <span class="moment-capture-type">${captureType}</span> · <span class="moment-date">${smartDate}</span>`;
 
   const isToday = isWithin24Hours(uploadDate);
   if (momentLiveBadge) {
@@ -362,18 +419,7 @@ function updateUiForCurrentImage() {
   }
 }
 
-function toggleDateDisplay() {
-  if (!currentMomentData) return;
-  isDateExpanded = !isDateExpanded;
-  updateUiForCurrentImage();
-}
-
-if (momentTime) {
-  momentTime.addEventListener("click", (e) => {
-    e.stopPropagation();
-    toggleDateDisplay();
-  });
-}
+// Date is always visible - no tap toggle
 
 function formatTimeDisplay(uploadedAt, captureType) {
   const safeDateString = uploadedAt.replace(" ", "T");
@@ -467,14 +513,44 @@ export function closeMomentView() {
   }
 }
 
-if (momentCloseBtn) {
-  momentCloseBtn.addEventListener("click", () => {
+if (momentBackBtn) {
+  const triggerBack = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    // 1. Force the UI to close INSTANTLY so it feels hyper-responsive
+    closeMomentView();
+
+    // 2. Clean up the URL history silently in the background
     if (history.state && history.state.modal === "moment") {
       history.back();
-    } else {
-      closeMomentView();
     }
-  });
+  };
+
+  // Standard click for desktop and well-behaved browsers
+  momentBackBtn.addEventListener("click", triggerBack);
+
+  // Bulletproof Mobile Tap: Forgives slight finger rolls and prevents ghost-clicks
+  let btnStartX = 0;
+  let btnStartY = 0;
+
+  momentBackBtn.addEventListener("touchstart", (e) => {
+    btnStartX = e.touches[0].clientX;
+    btnStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  momentBackBtn.addEventListener("touchend", (e) => {
+    const dx = Math.abs(e.changedTouches[0].clientX - btnStartX);
+    const dy = Math.abs(e.changedTouches[0].clientY - btnStartY);
+    
+    // If the finger moved less than 15px, it was a tap, not a swipe
+    if (dx < 15 && dy < 15) {
+      e.preventDefault(); // Stop the native click from double-firing
+      triggerBack(e);
+    }
+  }, { passive: false });
 }
 
 window.addEventListener("popstate", () => {

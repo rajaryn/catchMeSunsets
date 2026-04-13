@@ -46,6 +46,9 @@ export function initApp() {
     showCoverageOnHover: false,
     spiderfyOnMaxZoom: false,
     zoomToBoundsOnClick: true,
+    animate: true,
+    animateAddingMarkers: true,
+    removeOutsideVisibleBounds: false,
     iconCreateFunction: function (cluster) {
       const count = cluster.getChildCount();
       let intensityClass = "cluster-low";
