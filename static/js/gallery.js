@@ -91,7 +91,10 @@ export async function openGallery(pinId) {
   }
 }
 
-if (closeBtn) closeBtn.addEventListener("click", () => history.back());
+if (closeBtn) closeBtn.addEventListener("click", () => {
+  galleryModal.classList.remove("show-modal");
+  history.replaceState({}, "", window.location.pathname);
+});
 
 function openLightbox(index) {
   currentImageIndex = index;
@@ -101,7 +104,8 @@ function openLightbox(index) {
 }
 
 function closeLightbox() {
-  history.back();
+  lightboxModal.classList.remove("show");
+  history.replaceState({}, "", window.location.pathname);
 }
 
 function updateLightboxView(direction = "none") {

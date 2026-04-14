@@ -35,9 +35,11 @@ export async function openMomentView(pinId, lat, lon) {
 
   const topUiLayer = document.querySelector(".top-ui-layer");
   if (topUiLayer) {
-    topUiLayer.style.transition = "opacity 0.3s ease";
+    // Fade out, then instantly hide visibility
+    topUiLayer.style.transition =
+      "opacity 0.3s ease, visibility 0s linear 0.3s";
     topUiLayer.style.opacity = "0";
-    topUiLayer.style.pointerEvents = "none";
+    topUiLayer.style.visibility = "hidden";
   }
 
   // 2. Setup YouTube-style Background Blur Element
@@ -267,9 +269,10 @@ if (momentModal) {
       // HERO MODE Swipes
       if (diffY < -30) {
         expandViewer();
-      } else if (diffY > 50) {
-        if (history.state && history.state.modal === "moment") history.back();
-        else closeMomentView();
+      } else if (diffY > 30) {
+        // Lowered to 30 for fail-proof swipe down to close
+        closeMomentView();
+        history.replaceState({}, "", window.location.pathname);
       }
     } else {
       // EXPANDED MODE Swipes
@@ -298,18 +301,17 @@ if (momentModal) {
 }
 
 // --- DESKTOP THUMBNAIL LOGIC ---
-
 function adjustThumbnailSize() {
   if (!momentThumbnails) return;
 
   const thumbItems = momentThumbnails.querySelectorAll(".thumbnail-item");
-  const baseSize = Math.min(window.innerWidth, window.innerHeight);
+  const width = window.innerWidth; // Rely on width, just like CSS media queries
   let thumbSize;
 
-  if (baseSize > 1024) {
-    thumbSize = Math.max(60, Math.min(90, baseSize * 0.08));
-  } else if (baseSize > 768) {
-    thumbSize = Math.max(50, Math.min(70, baseSize * 0.07));
+  if (width > 1024) {
+    thumbSize = Math.max(60, Math.min(90, width * 0.08));
+  } else if (width > 768) {
+    thumbSize = Math.max(50, Math.min(70, width * 0.07));
   } else {
     thumbSize = 60;
   }
@@ -419,8 +421,6 @@ function updateUiForCurrentImage() {
   }
 }
 
-// Date is always visible - no tap toggle
-
 function formatTimeDisplay(uploadedAt, captureType) {
   const safeDateString = uploadedAt.replace(" ", "T");
   const utcString = safeDateString.endsWith("Z")
@@ -507,50 +507,11 @@ export function closeMomentView() {
 
   const topUiLayer = document.querySelector(".top-ui-layer");
   if (topUiLayer) {
-    topUiLayer.style.transition = "opacity 0.3s ease";
+    // Restore visibility instantly, then fade in
+    topUiLayer.style.transition = "opacity 0.3s ease, visibility 0s linear 0s";
+    topUiLayer.style.visibility = "visible";
     topUiLayer.style.opacity = "1";
-    topUiLayer.style.pointerEvents = "auto";
   }
-}
-
-if (momentBackBtn) {
-  const triggerBack = (e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
-    // 1. Force the UI to close INSTANTLY so it feels hyper-responsive
-    closeMomentView();
-
-    // 2. Clean up the URL history silently in the background
-    if (history.state && history.state.modal === "moment") {
-      history.back();
-    }
-  };
-
-  // Standard click for desktop and well-behaved browsers
-  momentBackBtn.addEventListener("click", triggerBack);
-
-  // Bulletproof Mobile Tap: Forgives slight finger rolls and prevents ghost-clicks
-  let btnStartX = 0;
-  let btnStartY = 0;
-
-  momentBackBtn.addEventListener("touchstart", (e) => {
-    btnStartX = e.touches[0].clientX;
-    btnStartY = e.touches[0].clientY;
-  }, { passive: true });
-
-  momentBackBtn.addEventListener("touchend", (e) => {
-    const dx = Math.abs(e.changedTouches[0].clientX - btnStartX);
-    const dy = Math.abs(e.changedTouches[0].clientY - btnStartY);
-    
-    // If the finger moved less than 15px, it was a tap, not a swipe
-    if (dx < 15 && dy < 15) {
-      e.preventDefault(); // Stop the native click from double-firing
-      triggerBack(e);
-    }
-  }, { passive: false });
 }
 
 window.addEventListener("popstate", () => {
@@ -558,3 +519,54 @@ window.addEventListener("popstate", () => {
     closeMomentView();
   }
 });
+
+// --- RESIZE & ORIENTATION HANDLER ---
+window.addEventListener("resize", () => {
+  if (momentModal && momentModal.classList.contains("show")) {
+    // 1. Instantly snap the slider track to the new window width
+    const tx = -currentImageIndex * window.innerWidth;
+    momentSlider.style.transition = "none";
+    momentSlider.style.transform = `translateX(${tx}px)`;
+
+    // 2. Recalculate dynamic overlay padding
+    adjustOverlayForImage();
+
+    // 3. Re-evaluate headers/thumbnails based on new dimensions
+    if (
+      window.innerWidth > 768 &&
+      momentThumbnails.children.length === 0 &&
+      allImages.length > 1
+    ) {
+      // Recover thumbnails if switching from mobile to desktop mode
+      renderThumbnails(allImages);
+    }
+  }
+});
+
+// --- FAIL-PROOF EXIT: Capture Phase Global Listener ---
+document.addEventListener(
+  "click",
+  (e) => {
+    // Check if the click target is the back button (or inside it)
+    const backBtn = e.target.closest("#moment-back-btn");
+
+    if (backBtn) {
+      // 1. Instantly kill all other event behaviors
+      e.preventDefault();
+      e.stopPropagation();
+
+      // 2. Trigger the close sequence
+      if (typeof closeMomentView === "function") {
+        closeMomentView();
+
+        // Fix history state to prevent users from getting trapped
+        if (history.state && history.state.modal === "moment") {
+          history.replaceState({}, "", window.location.pathname);
+        } else {
+          history.replaceState({}, "", window.location.pathname);
+        }
+      }
+    }
+  },
+  true,
+); // The 'true' forces this to run FIRST in the capture phase.

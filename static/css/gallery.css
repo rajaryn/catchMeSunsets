@@ -8,6 +8,7 @@
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -244,8 +245,8 @@ body.dark-mode .lightbox-date {
 
 @media (max-width: 768px) {
 
-    .nav-btn,
-    .lightbox-close {
+    .nav-btn
+    {
         display: none !important;
     }
 
@@ -434,7 +435,6 @@ body.dark-mode .lightbox-date {
 
 .moment-back-btn {
     position: absolute;
-    /* Updated for Safe Area / Dead Zone Fix */
     top: max(20px, env(safe-area-inset-top));
     left: max(20px, env(safe-area-inset-left));
     width: 44px;
@@ -453,6 +453,13 @@ body.dark-mode .lightbox-date {
     transition: all 0.3s ease;
     pointer-events: auto;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+
+    /* FIX 1: Force button onto the GPU compositor layer to prevent slider interception */
+    transform: translateZ(0);
+    will-change: transform;
+
+    /* FIX 2: Prevent mobile browsers from delaying or swallowing taps */
+    touch-action: manipulation;
 }
 
 @media (hover: hover) {
@@ -466,7 +473,8 @@ body.dark-mode .lightbox-date {
 .moment-back-btn:active {
     border-color: #ff5e3a;
     box-shadow: 0 4px 20px rgba(255, 94, 58, 0.2);
-    transform: scale(0.98);
+    /* Keep translateZ(0) alongside your scale animation */
+    transform: scale(0.98) translateZ(0);
     transition: transform 0.1s ease;
 }
 

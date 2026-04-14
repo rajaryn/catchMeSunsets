@@ -322,3 +322,8 @@ body.dark-mode .custom-cluster:hover {
         bottom: 110px !important;
     }
 }
+
+/* Force clicks to register on the button background, not the icon itself */
+#moment-back-btn svg {
+    pointer-events: none !important;
+}

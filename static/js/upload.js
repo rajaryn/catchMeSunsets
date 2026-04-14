@@ -63,7 +63,11 @@ if (btnGallery)
   });
 
 const uploadHandle = document.getElementById("upload-handle");
-if (uploadHandle) uploadHandle.addEventListener("click", () => history.back());
+if (uploadHandle) uploadHandle.addEventListener("click", () => {
+  uploadSheet.classList.remove("show");
+  drawerOverlay.classList.remove("show");
+  history.replaceState({}, "", window.location.pathname);
+});
 
 const handleFileSelection = (e) => {
   selectedFile = e.target.files[0];
@@ -364,4 +368,4 @@ export function closeStagingArea() {
 }
 
 if (closeStagingBtn)
-  closeStagingBtn.addEventListener("click", () => history.back());
+  closeStagingBtn.addEventListener("click", () => closeStagingArea());
