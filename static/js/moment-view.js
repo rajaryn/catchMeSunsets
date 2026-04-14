@@ -269,11 +269,8 @@ if (momentModal) {
       // HERO MODE Swipes
       if (diffY < -30) {
         expandViewer();
-      } else if (diffY > 30) {
-        // Lowered to 30 for fail-proof swipe down to close
-        closeMomentView();
-        history.replaceState({}, "", window.location.pathname);
       }
+      // Swipe down to close removed to enforce back-button ONLY exit.
     } else {
       // EXPANDED MODE Swipes
       if (diffY > 50 && !isHorizontalSwiping) {
@@ -413,7 +410,17 @@ function updateUiForCurrentImage() {
     hour: "numeric",
     minute: "2-digit",
   });
-  momentTime.innerHTML = `${timeStr} <span class="moment-capture-type">${captureType}</span> · <span class="moment-date">${smartDate}</span>`;
+
+  // Base HTML string
+  let timeHtml = `${timeStr} <span class="moment-capture-type">${captureType}</span> · <span class="moment-date">${smartDate}</span>`;
+
+  // MINIMAL INLINE ADDITION: Show "+X more" cleanly beside the date ONLY on the first image
+  if (allImages.length > 1 && currentImageIndex === 0) {
+    const extraCount = allImages.length - 1;
+    timeHtml += ` · <span style="opacity: 0.65; font-weight: 500;">+${extraCount} more</span>`;
+  }
+
+  momentTime.innerHTML = timeHtml;
 
   const isToday = isWithin24Hours(uploadDate);
   if (momentLiveBadge) {

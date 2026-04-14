@@ -208,3 +208,31 @@ document.addEventListener("click", (e) => {
     manualSearchResults.classList.remove("show");
   }
 });
+
+// --- PAGE TRANSITION LOGIC ---
+// Fade in when the page loads
+window.addEventListener('load', () => {
+    const curtain = document.getElementById('page-curtain');
+    if (curtain) curtain.classList.add('reveal');
+});
+
+// Fade out before navigating away
+document.querySelectorAll('.smooth-nav').forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetUrl = e.currentTarget.href;
+        const curtain = document.getElementById('page-curtain');
+        
+        // Close the side menu cleanly if it's open
+        const sideMenu = document.getElementById("side-menu");
+        if (sideMenu && sideMenu.classList.contains("show")) {
+            document.getElementById("brand-toggle").click();
+        }
+        
+        if (curtain) curtain.classList.remove('reveal');
+        
+        setTimeout(() => {
+            window.location.href = targetUrl;
+        }, 400); // Wait for the fade
+    });
+});

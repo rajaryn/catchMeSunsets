@@ -1,5 +1,4 @@
-//Camera access, HEIC parsing, EXIF processing, auto-complete places API, and the FormData upload
-
+// Camera access, HEIC parsing, EXIF processing, auto-complete places API, and the FormData upload
 
 import { API_BASE, svgSun, svgMoon } from "./constants.js";
 import { showToast, isNetworkSlow } from "./utils.js";
@@ -63,19 +62,23 @@ if (btnGallery)
   });
 
 const uploadHandle = document.getElementById("upload-handle");
-if (uploadHandle) uploadHandle.addEventListener("click", () => {
-  uploadSheet.classList.remove("show");
-  drawerOverlay.classList.remove("show");
-  history.replaceState({}, "", window.location.pathname);
-});
+if (uploadHandle)
+  uploadHandle.addEventListener("click", () => {
+    uploadSheet.classList.remove("show");
+    drawerOverlay.classList.remove("show");
+    history.replaceState({}, "", window.location.pathname);
+  });
 
-const handleFileSelection = (e) => {
-  selectedFile = e.target.files[0];
-  if (!selectedFile) return;
+// CRITICAL FIX: Made this async to control the order of operations
+const handleFileSelection = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
 
+  selectedFile = file; // Store temporarily
   selectedType =
     document.querySelector('input[name="capture_type"]:checked')?.value ||
     "sun";
+
   history.replaceState({ modal: "staging" }, "");
 
   uploadSheet.classList.remove("show");
@@ -89,39 +92,44 @@ const handleFileSelection = (e) => {
     topUiLayer.style.opacity = "0";
   }
 
-  const fileExt = selectedFile.name.split(".").pop().toLowerCase();
   stagingImg.removeAttribute("src");
   stagingImg.style.opacity = "0";
+  stagingBadge.innerHTML = selectedType === "moon" ? svgMoon : svgSun;
+  stagingDatePill.innerText = "Extracting details..."; // Loading state
 
+  // 1. EXTRACT EXIF FIRST! (From the raw, unconverted HEIC/JPG file)
+  await processExif(file);
+
+  // 2. CONVERT FOR PREVIEW & FINAL UPLOAD
+  const fileExt = file.name.split(".").pop().toLowerCase();
   if (
     (fileExt === "heic" || fileExt === "heif") &&
     typeof heic2any !== "undefined"
   ) {
-    heic2any({ blob: selectedFile, toType: "image/jpeg", quality: 0.5 })
-      .then((conversionResult) => {
-        stagingImg.src = URL.createObjectURL(conversionResult);
-        stagingImg.style.opacity = "1";
-      })
-      .catch(() => {
-        stagingImg.style.opacity = "1";
+    try {
+      const conversionResult = await heic2any({
+        blob: file,
+        toType: "image/jpeg",
+        quality: 0.8,
       });
+      stagingImg.src = URL.createObjectURL(conversionResult);
+      stagingImg.style.opacity = "1";
+
+      // IMPORTANT: Overwrite selectedFile so the POST request sends the converted JPG
+      // We already safely extracted finalLat, finalLon, and finalDate!
+      selectedFile = new File(
+        [conversionResult],
+        file.name.replace(/\.(heic|heif)$/i, ".jpg"),
+        { type: "image/jpeg" },
+      );
+    } catch (err) {
+      stagingImg.style.opacity = "1";
+      showToast("Could not preview HEIC image.", true);
+    }
   } else {
-    stagingImg.src = URL.createObjectURL(selectedFile);
+    stagingImg.src = URL.createObjectURL(file);
     stagingImg.style.opacity = "1";
   }
-
-  stagingBadge.innerHTML = selectedType === "moon" ? svgMoon : svgSun;
-  stagingDatePill.innerText = new Date().toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  finalDate = new Date().toISOString();
-  finalLat = null;
-  finalLon = null;
-  processExif();
 };
 
 if (fileInputCamera)
@@ -129,57 +137,94 @@ if (fileInputCamera)
 if (fileInputGallery)
   fileInputGallery.addEventListener("change", handleFileSelection);
 
-async function processExif() {
+async function processExif(fileToParse) {
   manualSearchWrapper.style.display = "none";
   btnShareMap.style.display = "none";
   btnShareMap.disabled = true;
   if (btnLiveLocation) btnLiveLocation.style.display = "none";
 
-  try {
-    const exifData = await exifr.parse(selectedFile);
-    if (exifData && exifData.latitude && exifData.longitude) {
-      finalLat = exifData.latitude;
-      finalLon = exifData.longitude;
+  // 1. ULTIMATE DATE FALLBACK: Use the file's native OS timestamp
+  let extractedDate = new Date(fileToParse.lastModified);
 
-      if (exifData.DateTimeOriginal) {
-        finalDate = exifData.DateTimeOriginal.toISOString();
-        stagingDatePill.innerText = exifData.DateTimeOriginal.toLocaleString(
-          undefined,
-          {
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          },
-        );
+  finalLat = null;
+  finalLon = null;
+
+  try {
+    // FIX: Convert File to ArrayBuffer first.
+    // Safari/iOS often fails to slice HEIC File blobs properly, causing exifr to crash.
+    const fileBuffer = await fileToParse.arrayBuffer();
+
+    // Explicitly ask exifr to parse TIFF and GPS blocks
+    const exifData = await exifr.parse(fileBuffer, {
+      tiff: true,
+      exif: true,
+      gps: true,
+    });
+
+    if (exifData) {
+      // Check multiple tag formats (HEIC files sometimes use CreateDate instead of DateTimeOriginal)
+      const rawDate =
+        exifData.DateTimeOriginal || exifData.CreateDate || exifData.ModifyDate;
+      if (rawDate) {
+        extractedDate = new Date(rawDate);
       }
 
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${finalLat}&lon=${finalLon}`,
-        );
-        const data = await res.json();
-        if (data && data.display_name) {
-          manualSearch.value = data.display_name
-            .split(",")
-            .slice(0, 3)
-            .join(",");
+      // 3. If we have GPS, lock it in and exit successfully
+      if (exifData.latitude && exifData.longitude) {
+        finalLat = exifData.latitude;
+        finalLon = exifData.longitude;
+        finalDate = extractedDate.toISOString();
+
+        stagingDatePill.innerText = extractedDate.toLocaleString(undefined, {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${finalLat}&lon=${finalLon}`,
+          );
+          const data = await res.json();
+          if (data && data.display_name) {
+            manualSearch.value = data.display_name
+              .split(",")
+              .slice(0, 3)
+              .join(",");
+            manualSearchWrapper.style.display = "flex";
+          }
+        } catch (err) {
           manualSearchWrapper.style.display = "flex";
         }
-      } catch (err) {
-        manualSearchWrapper.style.display = "flex";
-      }
 
-      btnShareMap.style.display = "flex";
-      btnShareMap.disabled = false;
-      btnShareMap.innerText = "Upload Here";
-    } else triggerFallbackLocation();
+        btnShareMap.style.display = "flex";
+        btnShareMap.disabled = false;
+        btnShareMap.innerText = "Upload Here";
+        return; // EXIT EARLY ON SUCCESS
+      }
+    }
+
+    // 4. If we reach here, we have a date, but NO location.
+    // We pass the rescued date to the fallback instead of losing it.
+    triggerFallbackLocation(extractedDate);
   } catch (err) {
-    triggerFallbackLocation();
+    console.warn("EXIF parsing failed. Rescuing OS Date.", err);
+    // We still have the extractedDate (from lastModified) even if the parser crashed!
+    triggerFallbackLocation(extractedDate);
   }
 }
 
-function triggerFallbackLocation() {
+function triggerFallbackLocation(dateToKeep) {
+  // Lock in the best available date (either EXIF DateTimeOriginal or OS lastModified)
+  finalDate = dateToKeep.toISOString();
+  stagingDatePill.innerText = dateToKeep.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
   showToast("No location found in photo.", true);
   manualSearchWrapper.style.display = "flex";
   manualSearch.value = "";
@@ -293,6 +338,8 @@ if (btnShareMap) {
     formData.append("image", selectedFile);
     formData.append("lat", finalLat);
     formData.append("lon", finalLon);
+
+    // THIS IS THE CRITICAL DATA YOUR BACKEND NEEDS TO READ
     formData.append("captured_at", finalDate);
     formData.append("capture_type", selectedType);
 

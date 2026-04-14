@@ -7,7 +7,8 @@
     position: absolute;
     top: max(15px, env(safe-area-inset-top));
     left: 0;
-    width: 100vw;
+    width: 100%;
+    /* FIX 1: Changed from 100vw to 100% to prevent scrollbar/safe-area bleed */
     padding: 0 15px;
     box-sizing: border-box;
     z-index: 4100;
@@ -244,6 +245,10 @@ body.dark-mode .menu-item {
 /* --- SEARCH BARS (Global & Manual) --- */
 .glass-search-container {
     flex-grow: 1;
+    flex-shrink: 1;
+    /* FIX 2: Explicitly allow this container to shrink */
+    min-width: 0;
+    /* FIX 3: Nullify default flexbox minimums */
     position: relative;
     display: flex;
     align-items: center;
@@ -291,6 +296,8 @@ body.dark-mode .menu-item {
 #location-search,
 #manual-search {
     width: 100%;
+    min-width: 0;
+    /* FIX 4: Prevent HTML input element from forcing its own width and blowing out the flex container */
     background: transparent;
     border: none;
     color: #333;

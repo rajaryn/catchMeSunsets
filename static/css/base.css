@@ -64,3 +64,32 @@ body.dark-mode .leaflet-control-zoom-out {
         display: none !important;
     }
 }
+
+/* ==============================================
+   PAGE TRANSITION CURTAIN
+   ============================================== */
+.page-curtain {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #fffcfb;
+    /* Vesper Light Mode Base */
+    z-index: 99999;
+    pointer-events: none;
+    /* Let clicks pass through when hidden */
+    opacity: 1;
+    /* Starts opaque (covering screen) on initial load */
+    transition: opacity 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Match your dark mode base */
+body.dark-mode .page-curtain {
+    background-color: #0d1117;
+}
+
+/* Add this class via JS to fade the curtain away */
+.page-curtain.reveal {
+    opacity: 0;
+}
