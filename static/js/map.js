@@ -62,8 +62,8 @@ export function initApp() {
       return L.divIcon({
         html: `<div class="custom-cluster ${intensityClass} ${hasTodayPin ? "has-today" : ""}"><span>${count}</span></div>`,
         className: "cluster-wrapper",
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
       });
     },
   }).addTo(map);
