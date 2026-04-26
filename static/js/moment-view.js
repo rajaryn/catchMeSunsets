@@ -422,9 +422,9 @@ function updateUiForCurrentImage() {
 
   momentTime.innerHTML = timeHtml;
 
-  const isToday = isWithin24Hours(uploadDate);
+  //const isToday = isWithin24Hours(uploadDate);
   if (momentLiveBadge) {
-    momentLiveBadge.style.display = isToday ? "flex" : "none";
+    momentLiveBadge.style.display = "none";
   }
 }
 

@@ -131,6 +131,19 @@ def upload():
     
     # NEW: Grab the historical EXIF time from the frontend (if it exists)
     captured_at_str = request.form.get('captured_at')
+    if captured_at_str:
+            try:
+                # FIX: Convert '2023-10-05T14:48:00.000Z' to '2023-10-05 14:48:00'
+                # We split at the period to remove milliseconds, and replace T with a space
+                cleaned_time_str = captured_at_str.split('.')[0].replace('T', ' ')
+                # Validate the format
+                parsed_time = datetime.strptime(cleaned_time_str, '%Y-%m-%d %H:%M:%S')
+                final_time = parsed_time.strftime('%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                # Fallback if parsing fails for some reason
+                final_time = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    else:
+            final_time = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S') # Uses current date
 
     if not file or file.filename == '' or not lat_str or not lon_str:
         return jsonify({'error': 'Missing required data'}), 400
@@ -157,7 +170,7 @@ def upload():
         image_url = upload_result.get('secure_url')
         image_url = upload_result.get('secure_url')
     except Exception as e:
-        print(f"🔥 CLOUDINARY ERROR: {e}") 
+        print(f"CLOUDINARY ERROR: {e}") 
         return jsonify({'error': 'Cloudinary upload failed', 'details': str(e)}), 500
 
     # 3. Database Transaction
@@ -178,11 +191,6 @@ def upload():
             cursor.execute("INSERT INTO pins (lat, lon) VALUES (%s, %s)", (lat, lon))
             pin_id = cursor.lastrowid
 
-        # Determine the correct timestamp to save
-        if captured_at_str:
-            final_time = captured_at_str # Uses historical EXIF date
-        else:
-            final_time = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S') # Uses current date
 
         # Insert the image with the explicitly defined time
         cursor.execute(
