@@ -10,18 +10,26 @@
     />
 
     <link rel="preconnect" href="https://unpkg.com" crossorigin />
+    
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      crossorigin="anonymous"
     />
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css"
+      crossorigin="anonymous"
     />
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css"
+      crossorigin="anonymous"
     />
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr" crossorigin="anonymous" defer></script>
+    
     <script
       src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js"
       defer
@@ -317,37 +325,71 @@
       </div>
       
       <div class="staging-content">
-        <div class="staging-right-panel">
-    <div id="manual-search-wrapper" class="glass-search-container" style="display: none;">
-        <span class="search-icon">
-            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        </span>
-        <input type="text" id="manual-search" placeholder="Search city or location..." autocomplete="off" />
-        <div id="manual-search-results" class="search-results"></div>
-    </div>
-    
-    <button class="action-btn primary-btn" id="btn-share-map" style="display: none;">Share to Map</button>
-
-    <button id="btn-live-location" class="secondary-action-btn" style="display: none;">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M12 2v2"></path>
-            <path d="M12 20v2"></path>
-            <path d="M2 12h2"></path>
-            <path d="M20 12h2"></path>
-            <circle cx="12" cy="12" r="7"></circle>
-        </svg>
-        Use current location
-    </button>
-</div>
         
-        <div class="preview-img-container">
-          <img id="staging-img" src="">
-          <div class="preview-badge" id="staging-badge" style="display: flex; align-items: center; gap: 6px;">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        <div class="staging-left-panel">
+          <div class="preview-img-container">
+              <div id="staging-badge" class="preview-badge" style="display: flex; align-items: center; justify-content: center;"></div>
+              <img id="staging-img" src="">
           </div>
-          <div class="preview-date-pill" id="staging-date-pill"></div>
         </div>
+
+        <div class="staging-right-panel">
+          <div id="manual-search-wrapper" class="glass-search-container" style="display: none;">
+              <span class="search-icon">
+                  <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </span>
+              <input type="text" id="manual-search" placeholder="Search city or location..." autocomplete="off" />
+              <div id="manual-search-results" class="search-results"></div>
+          </div>
+          
+          <button id="btn-live-location" class="secondary-action-btn" style="display: none;">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M12 2v2"></path>
+                  <path d="M12 20v2"></path>
+                  <path d="M2 12h2"></path>
+                  <path d="M20 12h2"></path>
+                  <circle cx="12" cy="12" r="7"></circle>
+              </svg>
+              Use current location
+          </button>
+
+          <div id="date-picker-container" style="display: none; flex-direction: column; width: 100%;">
+            <div class="split-date-time">
+                <div class="date-picker-wrapper half-width" id="date-wrapper-btn">
+                    <div class="date-icon">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                    </div>
+                    <input type="text" id="manual-date" class="date-picker-input" placeholder="Select Date" title="Set date" readonly />
+                    <div class="picker-chevron">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                </div>
+
+                <div class="date-picker-wrapper half-width" id="time-wrapper-btn">
+                    <div class="date-icon">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                    </div>
+                    <input type="text" id="manual-time" class="date-picker-input" placeholder="Select Time" title="Set time" readonly />
+                    <div class="picker-chevron">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                </div>
+            </div>
+            <p class="picker-hint">Defaults to current time. Tap to edit.</p>
+          </div>
+
+          <button class="action-btn primary-btn" id="btn-share-map" style="display: none;">Share to Map</button>
+        </div>
+
       </div>
     </div>
 

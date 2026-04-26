@@ -21,7 +21,6 @@ const fileInputGallery = document.getElementById("file-input-gallery");
 const stagingArea = document.getElementById("staging-area");
 const stagingImg = document.getElementById("staging-img");
 const stagingBadge = document.getElementById("staging-badge");
-const stagingDatePill = document.getElementById("staging-date-pill");
 const manualSearchWrapper = document.getElementById("manual-search-wrapper");
 const manualSearch = document.getElementById("manual-search");
 const manualSearchResults = document.getElementById("manual-search-results");
@@ -31,6 +30,14 @@ const closeStagingBtn = document.getElementById("close-staging");
 const topUiLayer = document.querySelector(".top-ui-layer");
 const galleryModal = document.getElementById("gallery-modal");
 const lightboxModal = document.getElementById("lightbox-modal");
+
+// The split pickers
+const manualDateInput = document.getElementById("manual-date");
+const manualTimeInput = document.getElementById("manual-time");
+
+// Flatpickr instances
+let datePickerInstance = null;
+let timePickerInstance = null;
 
 let selectedFile = null;
 let finalLat = null;
@@ -73,71 +80,69 @@ const handleFileSelection = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
-  selectedFile = file; // Store temporarily
-  selectedType =
-    document.querySelector('input[name="capture_type"]:checked')?.value ||
-    "sun";
+  selectedFile = file; 
+  selectedType = document.querySelector('input[name="capture_type"]:checked')?.value || "sun";
 
   history.replaceState({ modal: "staging" }, "");
-
   uploadSheet.classList.remove("show");
   drawerOverlay.classList.remove("show");
   stagingArea.classList.add("show");
 
   if (topUiLayer) {
-    topUiLayer.style.transition =
-      "transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease";
+    topUiLayer.style.transition = "transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease";
     topUiLayer.style.transform = "translateY(-150%)";
     topUiLayer.style.opacity = "0";
   }
 
+  // Visual Reset
   stagingImg.removeAttribute("src");
   stagingImg.style.opacity = "0";
-  stagingImg.style.background = ""; // Reset backgrounds
-  stagingBadge.innerHTML = selectedType === "moon" ? svgMoon : svgSun;
-  stagingDatePill.innerText = "Extracting details..."; // Loading state
+  stagingImg.style.background = ""; 
+  
+  if (stagingBadge) {
+    stagingBadge.innerHTML = selectedType === "moon" ? svgMoon : svgSun;
+  }
 
   const fileExt = file.name.split(".").pop().toLowerCase();
-  const isHeic =
-    fileExt === "heic" || fileExt === "heif" || file.type.includes("heic") || file.type.includes("heif");
+  const isHeic = fileExt === "heic" || fileExt === "heif" || file.type.includes("heic");
 
-  // 1. EXTRACT EXIF FIRST (for ALL image types)
-  // This extracts: date, time, location, and thumbnail for preview
-  await processExif(file);
+  // Launch EXIF extraction immediately in the background so it doesn't block UI
+  processExif(file).catch(err => console.warn("EXIF silently failed:", err));
 
-  // 2. SHOW PREVIEW (prefer EXIF thumbnail, fallback to full image)
-  if (stagingImg.dataset.exifThumbnail) {
-    stagingImg.src = stagingImg.dataset.exifThumbnail;
+  if (isHeic && typeof heic2any !== "undefined") {
+    // Show a temporary "Processing" UI so the user knows it's working
+    stagingImg.src = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'><rect width='100%' height='100%' fill='rgba(0,0,0,0.05)'/><text x='50%' y='50%' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle' alignment-baseline='middle' fill='%23666'>Processing HEIC...</text></svg>`;
     stagingImg.style.opacity = "1";
-  } else if (isHeic && typeof heic2any !== "undefined") {
+
     try {
-      const conversionResult = await heic2any({
-        blob: file,
-        toType: "image/jpeg",
-        quality: 0.8,
-      });
+      // Race HEIC conversion against a 4-second timeout to prevent total thread lock
+      const conversionPromise = heic2any({ blob: file, toType: "image/jpeg", quality: 0.5 });
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 4000));
+      
+      const conversionResult = await Promise.race([conversionPromise, timeoutPromise]);
+      const finalBlob = Array.isArray(conversionResult) ? conversionResult[0] : conversionResult;
 
-      const finalBlob = Array.isArray(conversionResult)
-        ? conversionResult[0]
-        : conversionResult;
-
+      // Render the successfully converted JPEG
       stagingImg.src = URL.createObjectURL(finalBlob);
-      stagingImg.style.opacity = "1";
-
-      selectedFile = new File(
-        [finalBlob],
-        file.name.replace(/\.(heic|heif)$/i, ".jpg"),
-        { type: "image/jpeg" },
-      );
-
+      
+      // Swap the HEIC file out for the new JPEG so the backend doesn't have to process it
+      selectedFile = new File([finalBlob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), { type: "image/jpeg" });
     } catch (err) {
-      console.warn("HEIC conversion failed:", err.message);
-      stagingImg.src = URL.createObjectURL(file);
-      stagingImg.style.opacity = "1";
+      console.warn("Mobile HEIC crash averted. Showing SVG fallback.", err);
+      // Fallback if the device completely fails to convert
+      const fallbackSvg = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'><rect width='100%' height='100%' fill='rgba(0,0,0,0.05)'/><text x='50%' y='50%' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle' alignment-baseline='middle' fill='%23666'>Photo Ready</text><text x='50%' y='65%' font-family='sans-serif' font-size='12' text-anchor='middle' alignment-baseline='middle' fill='%23888'>Preview unsupported on this Android</text></svg>`;
+      stagingImg.src = fallbackSvg;
     }
   } else {
+    // Instant execution for JPEGs & PNGs
     stagingImg.src = URL.createObjectURL(file);
     stagingImg.style.opacity = "1";
+    
+    // In case standard rendering fails (corrupted file)
+    stagingImg.onerror = () => {
+        const fallbackSvg = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'><rect width='100%' height='100%' fill='rgba(0,0,0,0.05)'/><text x='50%' y='50%' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle' alignment-baseline='middle' fill='%23666'>Photo Selected</text></svg>`;
+        stagingImg.src = fallbackSvg;
+    };
   }
 };
 
@@ -146,60 +151,102 @@ if (fileInputCamera)
 if (fileInputGallery)
   fileInputGallery.addEventListener("change", handleFileSelection);
 
+function showDatePicker(dateToUse) {
+  if (!(dateToUse instanceof Date) || isNaN(dateToUse.getTime())) {
+    dateToUse = new Date();
+  }
+
+  const container = document.getElementById('date-picker-container');
+  if (container) {
+    container.style.display = "flex";
+  }
+
+  if (manualDateInput) {
+    if (!datePickerInstance) {
+      datePickerInstance = flatpickr(manualDateInput, {
+        defaultDate: dateToUse,
+        dateFormat: "Y-m-d",
+        disableMobile: true,
+        monthSelectorType: "static", 
+        onChange: handleDatePickerChange
+      });
+      
+      const dateWrapperBtn = document.getElementById('date-wrapper-btn');
+      if(dateWrapperBtn) {
+          dateWrapperBtn.addEventListener('click', () => datePickerInstance.open());
+      }
+    } else {
+      datePickerInstance.setDate(dateToUse);
+    }
+  }
+
+  if (manualTimeInput) {
+    if (!timePickerInstance) {
+      timePickerInstance = flatpickr(manualTimeInput, {
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: "H:i",
+        time_24hr: true,
+        defaultDate: dateToUse,
+        disableMobile: true,
+        onChange: handleDatePickerChange,
+        onReady: function(selectedDates, dateStr, instance) {
+            // FIX: Force hour/minute inputs to be readonly so the mobile keyboard never pops up
+            if (instance.timeContainer) {
+                const inputs = instance.timeContainer.querySelectorAll('.flatpickr-hour, .flatpickr-minute');
+                inputs.forEach(input => {
+                    input.setAttribute('readonly', 'readonly');
+                });
+            }
+        }
+      });
+      
+      const timeWrapperBtn = document.getElementById('time-wrapper-btn');
+      if(timeWrapperBtn) {
+          timeWrapperBtn.addEventListener('click', () => timePickerInstance.open());
+      }
+    } else {
+      timePickerInstance.setDate(dateToUse);
+    }
+  }
+}
+
+function handleDatePickerChange() {
+  if (!manualDateInput || !manualTimeInput) return;
+  if (!manualDateInput.value || !manualTimeInput.value) return;
+
+  const selectedDate = new Date(`${manualDateInput.value}T${manualTimeInput.value}`);
+  if (selectedDate instanceof Date && !isNaN(selectedDate.getTime())) {
+    finalDate = selectedDate.toISOString();
+  }
+}
+
 async function processExif(fileToParse) {
   manualSearchWrapper.style.display = "none";
   btnShareMap.style.display = "none";
   btnShareMap.disabled = true;
   if (btnLiveLocation) btnLiveLocation.style.display = "none";
+  
+  const container = document.getElementById('date-picker-container');
+  if (container) container.style.display = "none";
 
-  let extractedDate = new Date(fileToParse.lastModified || Date.now());
-  if (isNaN(extractedDate.getTime())) {
-    extractedDate = new Date();
-  }
+  const defaultDate = new Date();
+  finalDate = defaultDate.toISOString();
 
   finalLat = null;
   finalLon = null;
 
   try {
     const exifData = await exifr.parse(fileToParse, {
-      tiff: true,
-      exif: true,
       gps: true,
-      thumbnail: true,
+      thumbnail: false, 
     });
 
-    if (exifData) {
-      const rawDate =
-        exifData.DateTimeOriginal || exifData.CreateDate || exifData.ModifyDate;
+    showDatePicker(defaultDate);
 
-      if (rawDate) {
-        let tempDate = null;
-        if (rawDate instanceof Date && !isNaN(rawDate.getTime())) {
-          tempDate = rawDate;
-        } else if (typeof rawDate === "string") {
-          const cleanDate = rawDate.replace(
-            /^(\d{4}):(\d{2}):(\d{2}) (.*)$/,
-            "$1-$2-$3T$4",
-          );
-          tempDate = new Date(cleanDate);
-        }
-
-        if (tempDate instanceof Date && !isNaN(tempDate.getTime())) {
-          extractedDate = tempDate;
-        }
-      }
-
-      if (exifData.latitude && exifData.longitude) {
+    if (exifData && exifData.latitude && exifData.longitude) {
         finalLat = exifData.latitude;
         finalLon = exifData.longitude;
-        finalDate = extractedDate.toISOString();
-
-        stagingDatePill.innerText = extractedDate.toLocaleString(undefined, {
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
 
         try {
           const res = await fetch(
@@ -220,25 +267,13 @@ async function processExif(fileToParse) {
         btnShareMap.style.display = "flex";
         btnShareMap.disabled = false;
         btnShareMap.innerText = "Upload Here";
-
-        if (exifData.thumbnail) {
-          const thumbBlob = new Blob([exifData.thumbnail], { type: 'image/jpeg' });
-          stagingImg.dataset.exifThumbnail = URL.createObjectURL(thumbBlob);
-        }
-
         return;
-      }
     }
 
-    if (exifData && exifData.thumbnail) {
-      const thumbBlob = new Blob([exifData.thumbnail], { type: 'image/jpeg' });
-      stagingImg.dataset.exifThumbnail = URL.createObjectURL(thumbBlob);
-    }
-
-    triggerFallbackLocation(extractedDate);
+    triggerFallbackLocation(defaultDate);
   } catch (err) {
-    console.warn("EXIF parsing failed. Rescuing OS Date.");
-    triggerFallbackLocation(extractedDate);
+    console.warn("EXIF parsing failed. Using default date and manual location.");
+    triggerFallbackLocation(defaultDate);
   }
 }
 
@@ -248,12 +283,7 @@ function triggerFallbackLocation(dateToKeep) {
   }
 
   finalDate = dateToKeep.toISOString();
-  stagingDatePill.innerText = dateToKeep.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  showDatePicker(dateToKeep);
 
   showToast("No location found in photo.", true);
   manualSearchWrapper.style.display = "flex";
