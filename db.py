@@ -8,24 +8,21 @@ load_dotenv()
 
 # 1. Base configuration for the MySQL Server
 SERVER_CONFIG = {
-    'host': os.getenv('DB_HOST'),
-    'port': int(os.getenv('DB_PORT', 4000)), 
-    'user': os.getenv('DB_USER'),
-    'password': os.getenv('DB_PASSWORD'),
-    'ssl_ca': certifi.where(),     
-    'ssl_verify_cert': True,
-    'ssl_verify_identity': True,
-    'autocommit': True
+    "host": os.getenv("DB_HOST"),
+    "port": int(os.getenv("DB_PORT", 4000)),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+    "ssl_ca": certifi.where(),
+    "ssl_verify_cert": True,
+    "ssl_verify_identity": True,
+    "autocommit": True,
 }
 
-DB_NAME = os.getenv('DB_NAME')
+DB_NAME = os.getenv("DB_NAME")
 
 # 2. Configuration for the App
-DB_CONFIG = {
-    **SERVER_CONFIG,
-    'database': DB_NAME,
-    'autocommit': False 
-}
+DB_CONFIG = {**SERVER_CONFIG, "database": DB_NAME, "autocommit": False}
+
 
 def init_db():
     """Creates the database and tables if they do not exist."""
@@ -65,19 +62,21 @@ def init_db():
             id INT AUTO_INCREMENT PRIMARY KEY,
             pin_id INT NOT NULL,
             file_path VARCHAR(255) NOT NULL,
-            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            capture_type VARCHAR(10) DEFAULT 'sun',
+            uploaded_at TIMESTAMP,
             FOREIGN KEY (pin_id) REFERENCES pins(id) ON DELETE CASCADE,
             INDEX (pin_id)
         )
         """)
-        
+
         db_conn.commit()
         cursor.close()
         db_conn.close()
         print("✅ Tables 'pins' and 'images' are ready.")
-        
+
     except Error as e:
         print(f"Error creating tables: {e}")
+
 
 def get_db_connection():
     """Returns a connection to the database for use in app endpoints."""
@@ -88,5 +87,6 @@ def get_db_connection():
         print(f"Error connecting to MySQL: {e}")
         return None
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     init_db()

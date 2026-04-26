@@ -93,32 +93,30 @@ const handleFileSelection = async (e) => {
 
   stagingImg.removeAttribute("src");
   stagingImg.style.opacity = "0";
+  stagingImg.style.background = ""; // Reset backgrounds
   stagingBadge.innerHTML = selectedType === "moon" ? svgMoon : svgSun;
   stagingDatePill.innerText = "Extracting details..."; // Loading state
 
-  // 1. EXTRACT EXIF FIRST! (From the raw, unconverted HEIC/JPG file)
+  const fileExt = file.name.split(".").pop().toLowerCase();
+  const isHeic =
+    fileExt === "heic" || fileExt === "heif" || file.type.includes("heic") || file.type.includes("heif");
+
+  // 1. EXTRACT EXIF FIRST (for ALL image types)
+  // This extracts: date, time, location, and thumbnail for preview
   await processExif(file);
 
-  // 2. CONVERT FOR PREVIEW & FINAL UPLOAD
-  const fileExt = file.name.split(".").pop().toLowerCase();
-
-  // FIX: Check if it's HEIC AND ensure the phone hasn't already auto-converted it to a JPEG
-  if (
-    (fileExt === "heic" || fileExt === "heif") &&
-    !file.type.includes("jpeg") &&
-    typeof heic2any !== "undefined"
-  ) {
+  // 2. SHOW PREVIEW (prefer EXIF thumbnail, fallback to full image)
+  if (stagingImg.dataset.exifThumbnail) {
+    stagingImg.src = stagingImg.dataset.exifThumbnail;
+    stagingImg.style.opacity = "1";
+  } else if (isHeic && typeof heic2any !== "undefined") {
     try {
-      // FIX: Force the MIME type for mobile browsers that drop it
-      const safeBlob = new Blob([file], { type: "image/heic" });
-
       const conversionResult = await heic2any({
-        blob: safeBlob,
+        blob: file,
         toType: "image/jpeg",
         quality: 0.8,
       });
 
-      // FIX: Handle arrays safely (Live Photos / Bursts)
       const finalBlob = Array.isArray(conversionResult)
         ? conversionResult[0]
         : conversionResult;
@@ -131,14 +129,13 @@ const handleFileSelection = async (e) => {
         file.name.replace(/\.(heic|heif)$/i, ".jpg"),
         { type: "image/jpeg" },
       );
+
     } catch (err) {
-      alert("HEIC Crash: " + err.message); // Forces your phone to reveal the exact error
-      console.error("HEIC Conversion Error:", err);
+      console.warn("HEIC conversion failed:", err.message);
+      stagingImg.src = URL.createObjectURL(file);
       stagingImg.style.opacity = "1";
-      showToast("Could not preview HEIC image.", true);
     }
   } else {
-    // Falls back here if it's a standard JPG, PNG, OR an auto-converted mobile HEIC
     stagingImg.src = URL.createObjectURL(file);
     stagingImg.style.opacity = "1";
   }
@@ -155,26 +152,41 @@ async function processExif(fileToParse) {
   btnShareMap.disabled = true;
   if (btnLiveLocation) btnLiveLocation.style.display = "none";
 
-  // 1. ULTIMATE DATE FALLBACK: Use the file's native OS timestamp
-  let extractedDate = new Date(fileToParse.lastModified);
+  let extractedDate = new Date(fileToParse.lastModified || Date.now());
+  if (isNaN(extractedDate.getTime())) {
+    extractedDate = new Date();
+  }
 
   finalLat = null;
   finalLon = null;
 
   try {
-    const fileBuffer = await fileToParse.arrayBuffer();
-
-    const exifData = await exifr.parse(fileBuffer, {
+    const exifData = await exifr.parse(fileToParse, {
       tiff: true,
       exif: true,
       gps: true,
+      thumbnail: true,
     });
 
     if (exifData) {
       const rawDate =
         exifData.DateTimeOriginal || exifData.CreateDate || exifData.ModifyDate;
+
       if (rawDate) {
-        extractedDate = new Date(rawDate);
+        let tempDate = null;
+        if (rawDate instanceof Date && !isNaN(rawDate.getTime())) {
+          tempDate = rawDate;
+        } else if (typeof rawDate === "string") {
+          const cleanDate = rawDate.replace(
+            /^(\d{4}):(\d{2}):(\d{2}) (.*)$/,
+            "$1-$2-$3T$4",
+          );
+          tempDate = new Date(cleanDate);
+        }
+
+        if (tempDate instanceof Date && !isNaN(tempDate.getTime())) {
+          extractedDate = tempDate;
+        }
       }
 
       if (exifData.latitude && exifData.longitude) {
@@ -208,18 +220,33 @@ async function processExif(fileToParse) {
         btnShareMap.style.display = "flex";
         btnShareMap.disabled = false;
         btnShareMap.innerText = "Upload Here";
+
+        if (exifData.thumbnail) {
+          const thumbBlob = new Blob([exifData.thumbnail], { type: 'image/jpeg' });
+          stagingImg.dataset.exifThumbnail = URL.createObjectURL(thumbBlob);
+        }
+
         return;
       }
     }
 
+    if (exifData && exifData.thumbnail) {
+      const thumbBlob = new Blob([exifData.thumbnail], { type: 'image/jpeg' });
+      stagingImg.dataset.exifThumbnail = URL.createObjectURL(thumbBlob);
+    }
+
     triggerFallbackLocation(extractedDate);
   } catch (err) {
-    console.warn("EXIF parsing failed. Rescuing OS Date.", err);
+    console.warn("EXIF parsing failed. Rescuing OS Date.");
     triggerFallbackLocation(extractedDate);
   }
 }
 
 function triggerFallbackLocation(dateToKeep) {
+  if (!(dateToKeep instanceof Date) || isNaN(dateToKeep.getTime())) {
+    dateToKeep = new Date();
+  }
+
   finalDate = dateToKeep.toISOString();
   stagingDatePill.innerText = dateToKeep.toLocaleString(undefined, {
     month: "short",
@@ -238,6 +265,13 @@ function triggerFallbackLocation(dateToKeep) {
   btnShareMap.disabled = true;
   btnShareMap.innerText = "Select a location first";
   if (btnLiveLocation) btnLiveLocation.style.display = "flex";
+}
+
+if (closeStagingBtn) {
+  closeStagingBtn.addEventListener("click", () => {
+    closeStagingArea();
+    history.replaceState({}, "", window.location.pathname);
+  });
 }
 
 if (btnLiveLocation) {
