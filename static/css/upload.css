@@ -554,6 +554,26 @@ body.dark-mode .secondary-action-btn {
     max-width: calc(100vw - 30px) !important; 
 }
 
+/* FIX: Remove ugly rectangles around Month arrows */
+.flatpickr-calendar .flatpickr-prev-month,
+.flatpickr-calendar .flatpickr-next-month {
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.flatpickr-calendar .flatpickr-prev-month:hover,
+.flatpickr-calendar .flatpickr-next-month:hover {
+    background: rgba(0, 0, 0, 0.05) !important;
+    border-radius: 8px !important;
+}
+
+.flatpickr-calendar .flatpickr-prev-month svg,
+.flatpickr-calendar .flatpickr-next-month svg {
+    fill: #333 !important;
+}
+
 .flatpickr-current-month .flatpickr-monthDropdown-months {
     appearance: none !important;
     -webkit-appearance: none !important;
@@ -588,6 +608,7 @@ body.dark-mode .secondary-action-btn {
     color: #fff !important;
 }
 
+/* FIX: Taller Time Picker Row for better mobile touch area */
 .flatpickr-time {
     border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
     box-sizing: border-box !important;
@@ -595,10 +616,13 @@ body.dark-mode .secondary-action-btn {
     overflow: hidden !important;
     display: flex !important;
     justify-content: center !important;
+    height: 60px !important; 
+    max-height: 60px !important;
 }
 
 .flatpickr-time .numInputWrapper {
     width: 35% !important;
+    height: 100% !important;
 }
 
 .flatpickr-time input,
@@ -606,6 +630,8 @@ body.dark-mode .secondary-action-btn {
     background: transparent !important;
     color: #333 !important;
     transition: background 0.2s ease !important;
+    font-size: 1.2rem !important; /* Larger numbers */
+    height: 100% !important;
 }
 
 .flatpickr-time input:hover,
@@ -615,15 +641,19 @@ body.dark-mode .secondary-action-btn {
     background: rgba(0, 0, 0, 0.05) !important;
 }
 
-/* FIX: Make Time Picker Arrows Always Visible & Tappable for Mobile */
+/* FIX: Make Time Picker Arrows Massive & Easily Tappable */
 .numInputWrapper span.arrowUp,
 .numInputWrapper span.arrowDown {
     border-color: rgba(0,0,0,0.1) !important;
     opacity: 1 !important; 
-    width: 30px !important; 
+    width: 45px !important; /* Huge width for thumbs */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
-.numInputWrapper span.arrowUp:after { border-bottom-color: #333 !important; border-width: 5px !important;}
-.numInputWrapper span.arrowDown:after { border-top-color: #333 !important; border-width: 5px !important;}
+.numInputWrapper span.arrowUp:after { border-bottom-color: #333 !important; border-width: 6px !important;}
+.numInputWrapper span.arrowDown:after { border-top-color: #333 !important; border-width: 6px !important;}
+
 
 /* Dark Mode Overrides */
 body.dark-mode .flatpickr-calendar {
@@ -638,6 +668,16 @@ body.dark-mode .flatpickr-weekday,
 body.dark-mode .flatpickr-month,
 body.dark-mode .flatpickr-current-month .flatpickr-monthDropdown-months {
     color: #e0e0e0 !important;
+}
+
+/* Dark Mode: Arrow fixes */
+body.dark-mode .flatpickr-calendar .flatpickr-prev-month svg,
+body.dark-mode .flatpickr-calendar .flatpickr-next-month svg {
+    fill: #e0e0e0 !important;
+}
+body.dark-mode .flatpickr-calendar .flatpickr-prev-month:hover,
+body.dark-mode .flatpickr-calendar .flatpickr-next-month:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
 }
 
 body.dark-mode .flatpickr-day:hover:not(.selected) {

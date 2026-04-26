@@ -5,11 +5,14 @@
 /* --- TOP UI LAYER --- */
 .top-ui-layer {
     position: absolute;
-    top: max(15px, env(safe-area-inset-top));
+    top: 0; /* Anchor to the absolute top edge */
     left: 0;
     width: 100%;
-    /* FIX 1: Changed from 100vw to 100% to prevent scrollbar/safe-area bleed */
-    padding: 0 15px;
+    /* FIX 1: Prevent scrollbar/safe-area bleed */
+    /* Pushes the entire top bar down safely below the notch/status bar */
+    padding-top: max(15px, env(safe-area-inset-top)) !important;
+    padding-left: 15px;
+    padding-right: 15px;
     box-sizing: border-box;
     z-index: 4100;
     pointer-events: none;
@@ -21,6 +24,9 @@
     gap: 12px;
     width: 100%;
     flex-wrap: nowrap;
+    /* Optional side padding for curved screens */
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
 }
 
 /* --- BUTTONS & PILLS --- */
