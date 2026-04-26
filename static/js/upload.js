@@ -69,7 +69,6 @@ if (uploadHandle)
     history.replaceState({}, "", window.location.pathname);
   });
 
-// CRITICAL FIX: Made this async to control the order of operations
 const handleFileSelection = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -102,31 +101,44 @@ const handleFileSelection = async (e) => {
 
   // 2. CONVERT FOR PREVIEW & FINAL UPLOAD
   const fileExt = file.name.split(".").pop().toLowerCase();
+
+  // FIX: Check if it's HEIC AND ensure the phone hasn't already auto-converted it to a JPEG
   if (
     (fileExt === "heic" || fileExt === "heif") &&
+    !file.type.includes("jpeg") &&
     typeof heic2any !== "undefined"
   ) {
     try {
+      // FIX: Force the MIME type for mobile browsers that drop it
+      const safeBlob = new Blob([file], { type: "image/heic" });
+
       const conversionResult = await heic2any({
-        blob: file,
+        blob: safeBlob,
         toType: "image/jpeg",
         quality: 0.8,
       });
-      stagingImg.src = URL.createObjectURL(conversionResult);
+
+      // FIX: Handle arrays safely (Live Photos / Bursts)
+      const finalBlob = Array.isArray(conversionResult)
+        ? conversionResult[0]
+        : conversionResult;
+
+      stagingImg.src = URL.createObjectURL(finalBlob);
       stagingImg.style.opacity = "1";
 
-      // IMPORTANT: Overwrite selectedFile so the POST request sends the converted JPG
-      // We already safely extracted finalLat, finalLon, and finalDate!
       selectedFile = new File(
-        [conversionResult],
+        [finalBlob],
         file.name.replace(/\.(heic|heif)$/i, ".jpg"),
         { type: "image/jpeg" },
       );
     } catch (err) {
+      alert("HEIC Crash: " + err.message); // Forces your phone to reveal the exact error
+      console.error("HEIC Conversion Error:", err);
       stagingImg.style.opacity = "1";
       showToast("Could not preview HEIC image.", true);
     }
   } else {
+    // Falls back here if it's a standard JPG, PNG, OR an auto-converted mobile HEIC
     stagingImg.src = URL.createObjectURL(file);
     stagingImg.style.opacity = "1";
   }
@@ -150,11 +162,8 @@ async function processExif(fileToParse) {
   finalLon = null;
 
   try {
-    // FIX: Convert File to ArrayBuffer first.
-    // Safari/iOS often fails to slice HEIC File blobs properly, causing exifr to crash.
     const fileBuffer = await fileToParse.arrayBuffer();
 
-    // Explicitly ask exifr to parse TIFF and GPS blocks
     const exifData = await exifr.parse(fileBuffer, {
       tiff: true,
       exif: true,
@@ -162,14 +171,12 @@ async function processExif(fileToParse) {
     });
 
     if (exifData) {
-      // Check multiple tag formats (HEIC files sometimes use CreateDate instead of DateTimeOriginal)
       const rawDate =
         exifData.DateTimeOriginal || exifData.CreateDate || exifData.ModifyDate;
       if (rawDate) {
         extractedDate = new Date(rawDate);
       }
 
-      // 3. If we have GPS, lock it in and exit successfully
       if (exifData.latitude && exifData.longitude) {
         finalLat = exifData.latitude;
         finalLon = exifData.longitude;
@@ -201,22 +208,18 @@ async function processExif(fileToParse) {
         btnShareMap.style.display = "flex";
         btnShareMap.disabled = false;
         btnShareMap.innerText = "Upload Here";
-        return; // EXIT EARLY ON SUCCESS
+        return;
       }
     }
 
-    // 4. If we reach here, we have a date, but NO location.
-    // We pass the rescued date to the fallback instead of losing it.
     triggerFallbackLocation(extractedDate);
   } catch (err) {
     console.warn("EXIF parsing failed. Rescuing OS Date.", err);
-    // We still have the extractedDate (from lastModified) even if the parser crashed!
     triggerFallbackLocation(extractedDate);
   }
 }
 
 function triggerFallbackLocation(dateToKeep) {
-  // Lock in the best available date (either EXIF DateTimeOriginal or OS lastModified)
   finalDate = dateToKeep.toISOString();
   stagingDatePill.innerText = dateToKeep.toLocaleString(undefined, {
     month: "short",
@@ -338,8 +341,6 @@ if (btnShareMap) {
     formData.append("image", selectedFile);
     formData.append("lat", finalLat);
     formData.append("lon", finalLon);
-
-    // THIS IS THE CRITICAL DATA YOUR BACKEND NEEDS TO READ
     formData.append("captured_at", finalDate);
     formData.append("capture_type", selectedType);
 
@@ -413,6 +414,3 @@ export function closeStagingArea() {
     btnShareMap.style.background = "";
   }
 }
-
-if (closeStagingBtn)
-  closeStagingBtn.addEventListener("click", () => closeStagingArea());
