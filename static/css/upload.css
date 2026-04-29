@@ -193,7 +193,8 @@ body.dark-mode .staging-top-bar {
     gap: 25px;
 }
 
-.staging-right-panel, .staging-left-panel {
+.staging-right-panel,
+.staging-left-panel {
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -249,93 +250,65 @@ body.dark-mode .preview-img-container {
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* --- SPLIT DATE & TIME PICKER --- */
-.split-date-time {
+/* --- HEIC INTENTIONAL FALLBACK UI --- */
+.heic-fallback-wrapper {
     display: flex;
-    gap: 15px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     width: 100%;
-}
-
-.date-picker-wrapper {
-    background: rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 20px;
-    padding: 12px 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
-    box-sizing: border-box;
-    cursor: pointer;
-}
-
-.date-picker-wrapper.half-width {
-    flex: 1;
-    width: 50%;
-}
-
-.date-picker-wrapper:focus-within,
-.date-picker-wrapper:hover {
-    border-color: #ff5e3a;
-    box-shadow: 0 4px 20px rgba(255, 94, 58, 0.2);
-    background: rgba(255, 255, 255, 0.8);
-}
-
-.date-icon {
-    color: #333;
-    opacity: 0.7;
-    display: flex;
-    align-items: center;
-}
-
-.date-picker-input {
+    height: 100%;
     background: transparent;
-    border: none;
-    color: #333;
-    font-size: 0.95rem;
-    font-weight: 600;
-    font-family: inherit;
-    width: 100%;
-    outline: none;
-    cursor: pointer;
-}
-
-.picker-chevron {
-    opacity: 0.4;
-    display: flex;
-    align-items: center;
-    margin-left: auto;
-    transition: transform 0.2s ease;
-    color: #333;
-}
-
-.picker-hint {
+    gap: 16px;
     text-align: center;
-    font-size: 0.8rem;
-    font-weight: 500;
-    opacity: 0.6;
-    margin-top: 10px;
+}
+
+.heic-icon-pulse {
+    color: #ff5e3a;
+    animation: gentlePulse 3s infinite ease-in-out;
+}
+
+.heic-fallback-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.heic-filename {
+    font-family: monospace;
+    font-size: 1rem;
     color: #333;
+    opacity: 0.9;
 }
 
-body.dark-mode .date-picker-wrapper {
-    background: rgba(20, 25, 30, 0.6);
-    border-color: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+.heic-subtext {
+    font-size: 0.85rem;
+    color: rgba(0, 0, 0, 0.5);
 }
 
-body.dark-mode .date-picker-wrapper:hover {
-    background: rgba(20, 25, 30, 0.9);
+@keyframes gentlePulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.7;
+    }
+
+    50% {
+        transform: scale(1.08);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 0.7;
+    }
 }
 
-body.dark-mode .date-icon,
-body.dark-mode .date-picker-input,
-body.dark-mode .picker-chevron,
-body.dark-mode .picker-hint {
-    color: #e0e0e0;
+body.dark-mode .heic-filename {
+    color: #ffffff;
+}
+
+body.dark-mode .heic-subtext {
+    color: rgba(255, 255, 255, 0.5);
 }
 
 /* --- THE UPLOAD BUTTON --- */
@@ -367,6 +340,7 @@ body.dark-mode #btn-share-map {
 }
 
 @media (hover: hover) {
+
     .primary-btn:hover:not(:disabled),
     #btn-share-map:hover:not(:disabled) {
         border-color: #ff5e3a !important;
@@ -476,13 +450,14 @@ body.dark-mode .secondary-action-btn {
     .staging-content {
         display: flex;
         flex-direction: column;
-        gap: 15px; 
-        padding-bottom: 80px; 
+        gap: 15px;
+        padding-bottom: 80px;
         overflow-y: auto;
     }
 
-    .staging-right-panel, .staging-left-panel {
-        display: contents; 
+    .staging-right-panel,
+    .staging-left-panel {
+        display: contents;
     }
 
     #manual-search-wrapper {
@@ -490,7 +465,7 @@ body.dark-mode .secondary-action-btn {
         margin-bottom: 0;
         flex-shrink: 0;
         border-radius: 30px !important;
-        overflow: hidden; 
+        overflow: hidden;
     }
 
     #manual-search {
@@ -515,9 +490,9 @@ body.dark-mode .secondary-action-btn {
 
     .preview-img-container {
         order: 4;
-        height: 280px; 
-        min-height: 280px; 
-        flex-shrink: 0; 
+        height: 280px;
+        min-height: 280px;
+        flex-shrink: 0;
         margin-bottom: 0;
     }
 
@@ -526,195 +501,176 @@ body.dark-mode .secondary-action-btn {
         margin: 0;
         flex-shrink: 0;
     }
-    
-    .split-date-time {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .date-picker-wrapper.half-width {
-        width: 100%;
-        flex: none;
-    }
 }
+
 
 /* ==============================================
-   CUSTOM FLATPICKR THEME (VESPER STYLE)
+   AIR DATEPICKER - VESPER GLASS THEME & FIXES
    ============================================== */
-.flatpickr-calendar {
-    background: rgba(255, 255, 255, 0.95) !important;
-    backdrop-filter: blur(25px) saturate(1.5) !important;
-    -webkit-backdrop-filter: blur(25px) saturate(1.5) !important;
-    border: 1px solid rgba(0, 0, 0, 0.1) !important;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
-    border-radius: 20px !important;
-    font-family: inherit !important;
-    padding: 10px !important;
-    color: #333 !important;
-    max-width: calc(100vw - 30px) !important; 
+
+/* 1. Fluid Container (Removed rigid min-width to prevent overflow) */
+#date-picker-container .glass-search-container {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 20px;
+    box-sizing: border-box;
 }
 
-/* FIX: Remove ugly rectangles around Month arrows */
-.flatpickr-calendar .flatpickr-prev-month,
-.flatpickr-calendar .flatpickr-next-month {
-    background: transparent !important;
-    border: none !important;
+/* 2. Match Pill Height to Search Bar */
+#vesper-datetime-picker {
+    font-weight: 600;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 15px 20px;
+    /* Matches standard search bar padding */
+    min-height: 50px;
+    /* Forces identical height */
+    border-radius: 30px;
+    /* Pill shape */
+    font-size: 1rem;
+    outline: none;
+
+    background: rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    color: #333;
+    transition: all 0.3s ease;
+}
+
+body.dark-mode #vesper-datetime-picker {
+    background: rgba(20, 25, 30, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #e0e0e0;
+}
+
+#vesper-datetime-picker:focus {
+    border-color: #ff5e3a;
+    /* Vesper Orange focus state */
+}
+
+/* 3. Global Container Z-Index */
+.air-datepicker-global-container {
+    z-index: 9999 !important;
+}
+
+/* 4. Glass Theme & Colors for the Calendar Popup */
+.air-datepicker {
+    --adp-background-color: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(20px) saturate(1.8);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+
+    --adp-color: #333333;
+    --adp-accent-color: #ff5e3a;
+    /* Vesper Orange */
+    --adp-day-name-color: #ff5e3a !important;
+    /* Force Day Names to Vesper Orange */
+
+    --adp-border-color: rgba(0, 0, 0, 0.08);
+    --adp-border-radius: 24px;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
+
+    font-family: inherit;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+
+    /* Hover/Active Variable Overrides (Light Mode) */
+    --adp-nav-action-bg-hover: rgba(255, 94, 58, 0.1) !important;
+    --adp-nav-title-bg-hover: rgba(255, 94, 58, 0.1) !important;
+    --adp-btn-background-color-hover: rgba(255, 94, 58, 0.1) !important;
+    --adp-btn-background-color-active: rgba(255, 94, 58, 0.2) !important;
+}
+
+/* Remove Mobile Browser Tap Highlights */
+.air-datepicker * {
+    -webkit-tap-highlight-color: transparent !important;
     outline: none !important;
-    box-shadow: none !important;
 }
 
-.flatpickr-calendar .flatpickr-prev-month:hover,
-.flatpickr-calendar .flatpickr-next-month:hover {
-    background: rgba(0, 0, 0, 0.05) !important;
-    border-radius: 8px !important;
+/* Day Names Styling */
+.air-datepicker-body--day-name {
+    color: var(--adp-day-name-color) !important;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.7rem;
 }
 
-.flatpickr-calendar .flatpickr-prev-month svg,
-.flatpickr-calendar .flatpickr-next-month svg {
-    fill: #333 !important;
-}
-
-.flatpickr-current-month .flatpickr-monthDropdown-months {
-    appearance: none !important;
-    -webkit-appearance: none !important;
-    background: transparent !important;
-    padding: 2px !important;
-    border-radius: 8px !important;
-    outline: none !important;
-    font-weight: bold !important;
-    width: auto !important;
-    text-align: center !important;
-    transition: background 0.2s ease !important;
-}
-
-.flatpickr-current-month .flatpickr-monthDropdown-months:hover,
-.flatpickr-current-month .flatpickr-monthDropdown-months:focus {
-    background: rgba(0, 0, 0, 0.05) !important;
-}
-
-.flatpickr-current-month .flatpickr-monthDropdown-months .flatpickr-monthDropdown-month {
-    background: rgba(255, 255, 255, 0.95) !important;
-    color: #333 !important;
-}
-
-.flatpickr-day.selected, 
-.flatpickr-day.startRange, 
-.flatpickr-day.endRange, 
-.flatpickr-day.selected:focus, 
-.flatpickr-day.selected:hover {
+/* Selected Date Bubble */
+.air-datepicker-cell.-selected- {
     background: #ff5e3a !important;
-    border-color: #ff5e3a !important;
+    color: white !important;
+    border-radius: 12px;
+}
+
+/* Navigation Buttons Accent */
+.air-datepicker-nav--action svg {
+    stroke: var(--adp-accent-color);
+}
+
+/* Vesper Time Slider Styling */
+.air-datepicker-time--row input[type='range'] {
+    accent-color: #ff5e3a;
+    background: transparent !important;
+    /* Prevents white background on interaction */
+}
+
+.air-datepicker-time--row input[type='range']:focus {
+    outline: none !important;
+}
+
+.air-datepicker-time--current-colon {
+    color: #ff5e3a;
     font-weight: bold;
-    color: #fff !important;
 }
 
-/* FIX: Taller Time Picker Row for better mobile touch area */
-.flatpickr-time {
-    border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
-    box-sizing: border-box !important;
-    max-width: 100% !important;
-    overflow: hidden !important;
-    display: flex !important;
-    justify-content: center !important;
-    height: 60px !important; 
-    max-height: 60px !important;
+/* 5. Dark Mode Overrides for the Calendar Popup */
+body.dark-mode .air-datepicker {
+    --adp-background-color: rgba(20, 25, 30, 0.85) !important;
+    --adp-color: #e0e0e0;
+    --adp-border-color: rgba(255, 255, 255, 0.1);
+    --adp-cell-background-color-hover: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+
+    /* Hover/Active Variable Overrides (Dark Mode) */
+    --adp-nav-action-bg-hover: rgba(255, 255, 255, 0.05) !important;
+    --adp-nav-title-bg-hover: rgba(255, 255, 255, 0.05) !important;
+    --adp-btn-background-color-hover: rgba(255, 255, 255, 0.05) !important;
+    --adp-btn-background-color-active: rgba(255, 255, 255, 0.1) !important;
 }
 
-.flatpickr-time .numInputWrapper {
-    width: 35% !important;
-    height: 100% !important;
+body.dark-mode .air-datepicker .adp-time-track {
+    background: rgba(255, 255, 255, 0.05);
 }
 
-.flatpickr-time input,
-.flatpickr-time .flatpickr-am-pm {
-    background: transparent !important;
-    color: #333 !important;
-    transition: background 0.2s ease !important;
-    font-size: 1.2rem !important; /* Larger numbers */
-    height: 100% !important;
+/* 6. Mobile Bounds Fix (Perfect Centering) */
+@media (max-width: 768px) {
+    .air-datepicker {
+        width: 92vw !important;
+        /* Adapt to display width safely */
+        max-width: 360px !important;
+        /* Cap max width so it doesn't get awkward on tablets */
+        position: fixed !important;
+        bottom: 20px !important;
+        top: auto !important;
+
+        /* Center it cleanly instead of pinning to the left */
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+
+        box-sizing: border-box;
+    }
 }
 
-.flatpickr-time input:hover,
-.flatpickr-time input:focus,
-.flatpickr-time .flatpickr-am-pm:hover,
-.flatpickr-time .flatpickr-am-pm:focus {
-    background: rgba(0, 0, 0, 0.05) !important;
+/* --- TIME PICKER HINT --- */
+.time-hint {
+    font-size: 0.75rem;
+    text-align: center;
+    margin-top: 10px;
+    color: #333;
+    opacity: 0.6;
+    font-weight: 600;
+    letter-spacing: 0.5px;
 }
 
-/* FIX: Make Time Picker Arrows Massive & Easily Tappable */
-.numInputWrapper span.arrowUp,
-.numInputWrapper span.arrowDown {
-    border-color: rgba(0,0,0,0.1) !important;
-    opacity: 1 !important; 
-    width: 45px !important; /* Huge width for thumbs */
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+body.dark-mode .time-hint {
+    color: #e0e0e0;
+    opacity: 0.5;
 }
-.numInputWrapper span.arrowUp:after { border-bottom-color: #333 !important; border-width: 6px !important;}
-.numInputWrapper span.arrowDown:after { border-top-color: #333 !important; border-width: 6px !important;}
-
-
-/* Dark Mode Overrides */
-body.dark-mode .flatpickr-calendar {
-    background: rgba(20, 25, 30, 0.95) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
-    color: #e0e0e0 !important;
-}
-
-body.dark-mode .flatpickr-day,
-body.dark-mode .flatpickr-weekday,
-body.dark-mode .flatpickr-month,
-body.dark-mode .flatpickr-current-month .flatpickr-monthDropdown-months {
-    color: #e0e0e0 !important;
-}
-
-/* Dark Mode: Arrow fixes */
-body.dark-mode .flatpickr-calendar .flatpickr-prev-month svg,
-body.dark-mode .flatpickr-calendar .flatpickr-next-month svg {
-    fill: #e0e0e0 !important;
-}
-body.dark-mode .flatpickr-calendar .flatpickr-prev-month:hover,
-body.dark-mode .flatpickr-calendar .flatpickr-next-month:hover {
-    background: rgba(255, 255, 255, 0.1) !important;
-}
-
-body.dark-mode .flatpickr-day:hover:not(.selected) {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border-color: transparent !important;
-}
-
-body.dark-mode .flatpickr-current-month .flatpickr-monthDropdown-months:hover,
-body.dark-mode .flatpickr-current-month .flatpickr-monthDropdown-months:focus {
-    background: rgba(255, 255, 255, 0.1) !important;
-}
-
-body.dark-mode .flatpickr-current-month .flatpickr-monthDropdown-months .flatpickr-monthDropdown-month {
-    background: #14191e !important; 
-    color: #e0e0e0 !important;
-}
-
-body.dark-mode .flatpickr-time {
-    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
-body.dark-mode .flatpickr-time input,
-body.dark-mode .flatpickr-time .flatpickr-am-pm {
-    color: #e0e0e0 !important;
-    background: transparent !important;
-}
-
-body.dark-mode .flatpickr-time input:hover,
-body.dark-mode .flatpickr-time input:focus,
-body.dark-mode .flatpickr-time .flatpickr-am-pm:hover,
-body.dark-mode .flatpickr-time .flatpickr-am-pm:focus {
-    background: rgba(255, 255, 255, 0.1) !important;
-}
-
-body.dark-mode .numInputWrapper span.arrowUp,
-body.dark-mode .numInputWrapper span.arrowDown {
-    border-color: rgba(255,255,255,0.1) !important;
-}
-body.dark-mode .numInputWrapper span.arrowUp:after { border-bottom-color: #e0e0e0 !important; }
-body.dark-mode .numInputWrapper span.arrowDown:after { border-top-color: #e0e0e0 !important; }

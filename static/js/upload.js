@@ -1,5 +1,3 @@
-// Camera access, HEIC parsing, EXIF processing, auto-complete places API, and the FormData upload
-
 import { API_BASE, svgSun, svgMoon } from "./constants.js";
 import { showToast, isNetworkSlow } from "./utils.js";
 import {
@@ -31,13 +29,9 @@ const topUiLayer = document.querySelector(".top-ui-layer");
 const galleryModal = document.getElementById("gallery-modal");
 const lightboxModal = document.getElementById("lightbox-modal");
 
-// The split pickers
-const manualDateInput = document.getElementById("manual-date");
-const manualTimeInput = document.getElementById("manual-time");
-
-// Flatpickr instances
-let datePickerInstance = null;
-let timePickerInstance = null;
+// Air Datepicker Instance
+let airPickerInstance = null;
+const pickerInput = document.getElementById("vesper-datetime-picker");
 
 let selectedFile = null;
 let finalLat = null;
@@ -80,8 +74,10 @@ const handleFileSelection = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
-  selectedFile = file; 
-  selectedType = document.querySelector('input[name="capture_type"]:checked')?.value || "sun";
+  selectedFile = file;
+  selectedType =
+    document.querySelector('input[name="capture_type"]:checked')?.value ||
+    "sun";
 
   history.replaceState({ modal: "staging" }, "");
   uploadSheet.classList.remove("show");
@@ -89,59 +85,59 @@ const handleFileSelection = async (e) => {
   stagingArea.classList.add("show");
 
   if (topUiLayer) {
-    topUiLayer.style.transition = "transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease";
+    topUiLayer.style.transition =
+      "transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease";
     topUiLayer.style.transform = "translateY(-150%)";
     topUiLayer.style.opacity = "0";
   }
 
-  // Visual Reset
   stagingImg.removeAttribute("src");
   stagingImg.style.opacity = "0";
-  stagingImg.style.background = ""; 
-  
+  stagingImg.style.display = "block";
+  stagingImg.style.background = "";
+
+  const previewContainer = stagingImg.parentElement;
+  const existingFallback = previewContainer.querySelector(
+    ".heic-fallback-wrapper",
+  );
+  if (existingFallback) existingFallback.remove();
+
   if (stagingBadge) {
     stagingBadge.innerHTML = selectedType === "moon" ? svgMoon : svgSun;
   }
 
   const fileExt = file.name.split(".").pop().toLowerCase();
-  const isHeic = fileExt === "heic" || fileExt === "heif" || file.type.includes("heic");
+  const isHeic =
+    fileExt === "heic" || fileExt === "heif" || file.type.includes("heic");
 
-  // Launch EXIF extraction immediately in the background so it doesn't block UI
-  processExif(file).catch(err => console.warn("EXIF silently failed:", err));
+  processExif(file).catch((err) => console.warn("EXIF silently failed:", err));
 
-  if (isHeic && typeof heic2any !== "undefined") {
-    // Show a temporary "Processing" UI so the user knows it's working
-    stagingImg.src = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'><rect width='100%' height='100%' fill='rgba(0,0,0,0.05)'/><text x='50%' y='50%' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle' alignment-baseline='middle' fill='%23666'>Processing HEIC...</text></svg>`;
-    stagingImg.style.opacity = "1";
+  if (isHeic) {
+    stagingImg.style.display = "none";
 
-    try {
-      // Race HEIC conversion against a 4-second timeout to prevent total thread lock
-      const conversionPromise = heic2any({ blob: file, toType: "image/jpeg", quality: 0.5 });
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 4000));
-      
-      const conversionResult = await Promise.race([conversionPromise, timeoutPromise]);
-      const finalBlob = Array.isArray(conversionResult) ? conversionResult[0] : conversionResult;
-
-      // Render the successfully converted JPEG
-      stagingImg.src = URL.createObjectURL(finalBlob);
-      
-      // Swap the HEIC file out for the new JPEG so the backend doesn't have to process it
-      selectedFile = new File([finalBlob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), { type: "image/jpeg" });
-    } catch (err) {
-      console.warn("Mobile HEIC crash averted. Showing SVG fallback.", err);
-      // Fallback if the device completely fails to convert
-      const fallbackSvg = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'><rect width='100%' height='100%' fill='rgba(0,0,0,0.05)'/><text x='50%' y='50%' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle' alignment-baseline='middle' fill='%23666'>Photo Ready</text><text x='50%' y='65%' font-family='sans-serif' font-size='12' text-anchor='middle' alignment-baseline='middle' fill='%23888'>Preview unsupported on this Android</text></svg>`;
-      stagingImg.src = fallbackSvg;
-    }
+    const fallbackDiv = document.createElement("div");
+    fallbackDiv.className = "heic-fallback-wrapper";
+    fallbackDiv.innerHTML = `
+        <div class="heic-icon-pulse">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+        </div>
+        <div class="heic-fallback-text">
+            <span class="heic-filename">${file.name}</span>
+            <span class="heic-subtext">Ready to place.</span>
+        </div>
+    `;
+    previewContainer.appendChild(fallbackDiv);
   } else {
-    // Instant execution for JPEGs & PNGs
     stagingImg.src = URL.createObjectURL(file);
     stagingImg.style.opacity = "1";
-    
-    // In case standard rendering fails (corrupted file)
+
     stagingImg.onerror = () => {
-        const fallbackSvg = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'><rect width='100%' height='100%' fill='rgba(0,0,0,0.05)'/><text x='50%' y='50%' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle' alignment-baseline='middle' fill='%23666'>Photo Selected</text></svg>`;
-        stagingImg.src = fallbackSvg;
+      const fallbackSvg = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'><rect width='100%' height='100%' fill='rgba(0,0,0,0.05)'/><text x='50%' y='50%' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle' alignment-baseline='middle' fill='%23666'>Photo Selected</text></svg>`;
+      stagingImg.src = fallbackSvg;
     };
   }
 };
@@ -151,83 +147,110 @@ if (fileInputCamera)
 if (fileInputGallery)
   fileInputGallery.addEventListener("change", handleFileSelection);
 
+// ==========================================
+// AIR DATEPICKER LOGIC (UNIFIED FIX)
+// ==========================================
+const localeEn = {
+  days: [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ],
+  daysShort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  daysMin: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
+  months: [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ],
+  monthsShort: [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ],
+  today: "Today",
+  clear: "Clear",
+  dateFormat: "MMM d, yyyy",
+  timeFormat: "HH:mm",
+  firstDay: 0,
+};
+
 function showDatePicker(dateToUse) {
   if (!(dateToUse instanceof Date) || isNaN(dateToUse.getTime())) {
     dateToUse = new Date();
   }
 
-  const container = document.getElementById('date-picker-container');
-  if (container) {
-    container.style.display = "flex";
-  }
+  const container = document.getElementById("date-picker-container");
+  if (container) container.style.display = "block";
 
-  if (manualDateInput) {
-    if (!datePickerInstance) {
-      datePickerInstance = flatpickr(manualDateInput, {
-        defaultDate: dateToUse,
-        dateFormat: "Y-m-d",
-        disableMobile: true,
-        monthSelectorType: "static", 
-        onChange: handleDatePickerChange
-      });
-      
-      const dateWrapperBtn = document.getElementById('date-wrapper-btn');
-      if(dateWrapperBtn) {
-          dateWrapperBtn.addEventListener('click', () => datePickerInstance.open());
-      }
-    } else {
-      datePickerInstance.setDate(dateToUse);
-    }
-  }
-
-  if (manualTimeInput) {
-    if (!timePickerInstance) {
-      timePickerInstance = flatpickr(manualTimeInput, {
-        enableTime: true,
-        noCalendar: true,
-        dateFormat: "H:i",
-        time_24hr: true,
-        defaultDate: dateToUse,
-        disableMobile: true,
-        onChange: handleDatePickerChange,
-        onReady: function(selectedDates, dateStr, instance) {
-            // FIX: Force hour/minute inputs to be readonly so the mobile keyboard never pops up
-            if (instance.timeContainer) {
-                const inputs = instance.timeContainer.querySelectorAll('.flatpickr-hour, .flatpickr-minute');
-                inputs.forEach(input => {
-                    input.setAttribute('readonly', 'readonly');
-                });
-            }
+  // 1. Initialize ONLY once. Never destroy it.
+  if (!airPickerInstance) {
+    airPickerInstance = new AirDatepicker("#vesper-datetime-picker", {
+      locale: localeEn,
+      timepicker: true,
+      timeFormat: "HH:mm", // Strict 24h format
+      maxHours: 23,
+      minutesStep: 1,
+      position: "bottom center",
+      autoClose: false,
+      isMobile: false,
+      // CRITICAL FIX: Lock the calendar DOM element inside your container
+      // rather than the document body to prevent null coordinate crashes.
+      container: "#date-picker-container",
+      onSelect: ({ date }) => {
+        if (date && !Array.isArray(date)) {
+          finalDate =
+            new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+              .toISOString()
+              .split(".")[0] + "Z";
         }
-      });
-      
-      const timeWrapperBtn = document.getElementById('time-wrapper-btn');
-      if(timeWrapperBtn) {
-          timeWrapperBtn.addEventListener('click', () => timePickerInstance.open());
-      }
-    } else {
-      timePickerInstance.setDate(dateToUse);
-    }
+      },
+    });
   }
+
+  // 2. Safely update the date without recreating the UI instance
+  airPickerInstance.clear();
+  airPickerInstance.selectDate(dateToUse);
+
+  finalDate =
+    new Date(dateToUse.getTime() - dateToUse.getTimezoneOffset() * 60000)
+      .toISOString()
+      .split(".")[0] + "Z";
 }
 
-function handleDatePickerChange() {
-  if (!manualDateInput || !manualTimeInput) return;
-  if (!manualDateInput.value || !manualTimeInput.value) return;
-
-  const selectedDate = new Date(`${manualDateInput.value}T${manualTimeInput.value}`);
-  if (selectedDate instanceof Date && !isNaN(selectedDate.getTime())) {
-    finalDate = selectedDate.toISOString();
-  }
-}
+// ==========================================
+// END AIR DATEPICKER LOGIC
+// ==========================================
 
 async function processExif(fileToParse) {
   manualSearchWrapper.style.display = "none";
   btnShareMap.style.display = "none";
   btnShareMap.disabled = true;
   if (btnLiveLocation) btnLiveLocation.style.display = "none";
-  
-  const container = document.getElementById('date-picker-container');
+
+  const container = document.getElementById("date-picker-container");
   if (container) container.style.display = "none";
 
   const defaultDate = new Date();
@@ -239,40 +262,52 @@ async function processExif(fileToParse) {
   try {
     const exifData = await exifr.parse(fileToParse, {
       gps: true,
-      thumbnail: false, 
+      thumbnail: false,
     });
 
-    showDatePicker(defaultDate);
-
-    if (exifData && exifData.latitude && exifData.longitude) {
-        finalLat = exifData.latitude;
-        finalLon = exifData.longitude;
-
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${finalLat}&lon=${finalLon}`,
-          );
-          const data = await res.json();
-          if (data && data.display_name) {
-            manualSearch.value = data.display_name
-              .split(",")
-              .slice(0, 3)
-              .join(",");
-            manualSearchWrapper.style.display = "flex";
-          }
-        } catch (err) {
-          manualSearchWrapper.style.display = "flex";
-        }
-
-        btnShareMap.style.display = "flex";
-        btnShareMap.disabled = false;
-        btnShareMap.innerText = "Upload Here";
-        return;
+    let photoDate = defaultDate;
+    if (exifData && exifData.DateTimeOriginal) {
+      if (
+        exifData.DateTimeOriginal instanceof Date &&
+        !isNaN(exifData.DateTimeOriginal.getTime())
+      ) {
+        photoDate = exifData.DateTimeOriginal;
+      }
     }
 
-    triggerFallbackLocation(defaultDate);
+    showDatePicker(photoDate);
+
+    if (exifData && exifData.latitude && exifData.longitude) {
+      finalLat = exifData.latitude;
+      finalLon = exifData.longitude;
+
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${finalLat}&lon=${finalLon}`,
+        );
+        const data = await res.json();
+        if (data && data.display_name) {
+          manualSearch.value = data.display_name
+            .split(",")
+            .slice(0, 3)
+            .join(",");
+          manualSearchWrapper.style.display = "flex";
+        }
+      } catch (err) {
+        manualSearchWrapper.style.display = "flex";
+      }
+
+      btnShareMap.style.display = "flex";
+      btnShareMap.disabled = false;
+      btnShareMap.innerText = "Place this moment";
+      return;
+    }
+
+    triggerFallbackLocation(photoDate);
   } catch (err) {
-    console.warn("EXIF parsing failed. Using default date and manual location.");
+    console.warn(
+      "EXIF parsing failed. Using default date and manual location.",
+    );
     triggerFallbackLocation(defaultDate);
   }
 }
@@ -282,7 +317,6 @@ function triggerFallbackLocation(dateToKeep) {
     dateToKeep = new Date();
   }
 
-  finalDate = dateToKeep.toISOString();
   showDatePicker(dateToKeep);
 
   showToast("No location found in photo.", true);
@@ -383,7 +417,7 @@ if (manualSearch) {
             manualSearchResults.classList.remove("show");
             btnShareMap.style.display = "flex";
             btnShareMap.disabled = false;
-            btnShareMap.innerText = "Upload Here";
+            btnShareMap.innerText = "Place this moment";
           });
           manualSearchResults.appendChild(item);
         });
@@ -398,7 +432,8 @@ if (btnShareMap) {
     if (!finalLat || !finalLon)
       return showToast("Please provide a valid location.", true);
 
-    btnShareMap.innerText = "Uploading...";
+    const originalText = btnShareMap.innerText;
+    btnShareMap.innerText = "Saving your moment...";
     btnShareMap.disabled = true;
 
     const formData = new FormData();
@@ -415,13 +450,14 @@ if (btnShareMap) {
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable) {
           const percent = Math.round((event.loaded / event.total) * 100);
-          btnShareMap.innerText = `Uploading... ${percent}%`;
+          btnShareMap.innerText = `Saving... ${percent}%`;
           btnShareMap.style.backgroundImage = `linear-gradient(to right, rgba(255, 94, 58, 0.9) ${percent}%, rgba(255, 255, 255, 0.1) ${percent}%)`;
         }
       };
 
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
+          btnShareMap.innerText = "Saved!";
           showToast("Archived successfully.");
           fetchAllPins();
           map.flyTo([finalLat, finalLon], 16, { animate: true, duration: 1.5 });
@@ -434,16 +470,19 @@ if (btnShareMap) {
           }, 1000);
         } else {
           showToast("Upload failed.", true);
+          btnShareMap.innerText = "Place this moment";
           btnShareMap.style.backgroundImage = "";
         }
       };
       xhr.onerror = () => {
         showToast("Network error.", true);
+        btnShareMap.innerText = "Place this moment";
         btnShareMap.style.backgroundImage = "";
       };
       xhr.send(formData);
     } catch (error) {
       showToast("Upload failed.", true);
+      btnShareMap.innerText = "Place this moment";
       btnShareMap.style.backgroundImage = "";
     }
   });
@@ -463,7 +502,16 @@ export function closeStagingArea() {
     topUiLayer.style.opacity = "1";
   }
 
+  // Visual Cleanup
   selectedFile = null;
+  if (stagingImg) {
+    stagingImg.style.display = "block";
+    const existingFallback = stagingImg.parentElement?.querySelector(
+      ".heic-fallback-wrapper",
+    );
+    if (existingFallback) existingFallback.remove();
+  }
+
   if (fileInputCamera) fileInputCamera.value = "";
   if (fileInputGallery) fileInputGallery.value = "";
   if (manualSearch) manualSearch.value = "";
@@ -472,8 +520,22 @@ export function closeStagingArea() {
     manualSearchResults.classList.remove("show");
   }
   if (btnLiveLocation) btnLiveLocation.style.display = "none";
+
+  // ==========================================
+  // SAFE DATEPICKER CLEANUP
+  // ==========================================
+  // Do NOT use .destroy() and do NOT clone the input.
+  // Just hide the calendar UI and reset the value.
+  if (airPickerInstance) {
+    airPickerInstance.hide();
+    airPickerInstance.clear();
+  }
+
+  const pickerInput = document.getElementById("vesper-datetime-picker");
+  if (pickerInput) pickerInput.value = "";
+
   if (btnShareMap) {
-    btnShareMap.innerText = "Share to Map";
+    btnShareMap.innerText = "Place this moment";
     btnShareMap.disabled = false;
     btnShareMap.style.background = "";
   }

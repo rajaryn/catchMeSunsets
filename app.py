@@ -11,6 +11,9 @@ import cloudinary.uploader
 from functools import wraps
 from dotenv import load_dotenv
 
+# NEW: Import your modular image utility
+from image_utils import convert_heic_to_jpg
+
 # Load environment variables
 load_dotenv()
 
@@ -155,10 +158,23 @@ def upload():
         return jsonify({'error': 'Invalid coordinates format'}), 400
 
    
-    # 2. Upload directly to Cloudinary with STANDARD CONVERSION
+    # 2. Process & Upload to Cloudinary
     try:
+        filename_lower = file.filename.lower()
+        
+        # ⚡️ Modular HEIC Processing
+        if filename_lower.endswith('.heic') or filename_lower.endswith('.heif'):
+            processed_file = convert_heic_to_jpg(file)
+            
+            if not processed_file:
+                return jsonify({'error': 'Failed to process HEIC/HEIF image locally'}), 500
+                
+            upload_target = processed_file
+        else:
+            upload_target = file
+
         upload_result = cloudinary.uploader.upload(
-            file,
+            upload_target,
             folder="catchmesunsets", 
             resource_type="image",
             format="jpg", # Force everything to be a universal JPEG
@@ -168,10 +184,9 @@ def upload():
             ]
         )
         image_url = upload_result.get('secure_url')
-        image_url = upload_result.get('secure_url')
     except Exception as e:
-        print(f"CLOUDINARY ERROR: {e}") 
-        return jsonify({'error': 'Cloudinary upload failed', 'details': str(e)}), 500
+        print(f"UPLOAD/PROCESSING ERROR: {e}") 
+        return jsonify({'error': 'Upload or processing failed', 'details': str(e)}), 500
 
     # 3. Database Transaction
     conn = get_db_connection()
