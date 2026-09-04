@@ -1,6 +1,8 @@
 import os
 import math
 import heapq
+import urllib.request
+import urllib.error
 from datetime import datetime, timezone
 from flask import Flask, Response, request, jsonify, render_template, send_from_directory 
 from flask import make_response
@@ -120,6 +122,31 @@ def serve_sw():
 @app.route('/images/<path:filename>')
 def custom_static(filename):
     return send_from_directory('static/images', filename)
+
+# Carto Basemap Tile Proxy (protects CARTO_API_KEY on the backend)
+@app.route('/tiles/<int:z>/<int:x>/<int:y>.png', methods=['GET'])
+def tile_proxy(z, x, y):
+    carto_key = os.getenv('CARTO_API_KEY', '')
+    subdomain = ['a', 'b', 'c', 'd'][(x + y) % 4]
+    url = f"https://{subdomain}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
+    if carto_key:
+        url += f"?key={carto_key}"
+    
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "Vesper/1.0"}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=5) as response:
+            content = response.read()
+            resp = make_response(content)
+            resp.headers['Content-Type'] = 'image/png'
+            resp.headers['Cache-Control'] = 'public, max-age=86400'  # Cache for 24h
+            return resp
+    except urllib.error.HTTPError as e:
+        return Response(e.read(), status=e.code, mimetype="text/plain")
+    except Exception as e:
+        return Response(str(e), status=502, mimetype="text/plain")
 
 @app.route('/upload', methods=['POST'])
 def upload():

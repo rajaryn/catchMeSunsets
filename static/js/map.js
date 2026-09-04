@@ -20,15 +20,13 @@ export function initApp() {
   });
   L.control.zoom({ position: "bottomright" }).addTo(map);
 
-  L.tileLayer(
-    "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    {
-      attribution: "&copy; Carto",
-      maxZoom: 20,
-      keepBuffer: 8,
-      updateWhenIdle: true,
-    },
-  ).addTo(map);
+  L.tileLayer("/tiles/{z}/{x}/{y}.png", {
+    attribution:
+      '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 20,
+    keepBuffer: 8,
+    updateWhenIdle: true,
+  }).addTo(map);
 
   fetch("/static/india.geojson")
     .then((res) => res.json())
